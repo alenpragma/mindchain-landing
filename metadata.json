@@ -1,0 +1,6 @@
+{
+  "name": "MindChain L1 Ecosystem & Bonus Portal",
+  "description": "Established MindChain (MIND) EVM Layer-1 Blockchain Ecosystem, Exclusive Platform Bonus Purchase Portal with USDT BEP-20 and Instant Withdrawal to mindchain.info.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
