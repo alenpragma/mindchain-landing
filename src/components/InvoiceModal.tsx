@@ -46,8 +46,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const [redirectCountdown, setRedirectCountdown] = useState<number>(3);
   const [simulatedTxHash, setSimulatedTxHash] = useState<string>('');
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize invoice on open
   useEffect(() => {
