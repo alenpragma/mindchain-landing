@@ -75,7 +75,7 @@ export const TrustAndSpecs: React.FC = () => {
 
           <div className="bg-[#1e293b]/50 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full min-w-[620px] text-left text-xs font-mono">
                 <thead className="bg-slate-900/80 text-slate-400 uppercase border-b border-slate-800 text-[11px]">
                   <tr>
                     <th className="py-4 px-5">Metric / Feature</th>

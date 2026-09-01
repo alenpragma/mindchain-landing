@@ -267,29 +267,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200">
       {/* Sub-Header / Top Bar */}
-      <div className="border-b border-slate-800 bg-[#1e293b]/40 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      {/* Account Identifiers & Quick Actions */}
+      <div className="border-b border-slate-800 bg-[#1e293b]/40 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-3">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Account Identifiers */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Wallet className="w-5 h-5" />
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  {user.name ? `${user.name} • EVM Account` : 'Connected EVM Address'}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate max-w-[140px] sm:max-w-[240px]">
+                  {user.name ? `${user.name} • EVM` : 'EVM Account'}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  Mainnet Alpha
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  Mainnet
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="font-mono text-sm font-bold text-white">
-                  {truncateAddress(user.address, 8, 6)}
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="font-mono text-xs sm:text-sm font-bold text-white truncate">
+                  {truncateAddress(user.address, 6, 4)}
                 </span>
                 <button
                   onClick={handleCopyAddress}
-                  className="text-slate-400 hover:text-cyan-400 p-0.5 transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-cyan-400 p-0.5 transition-colors cursor-pointer shrink-0"
                   title="Copy full address"
                 >
                   {copiedAddr ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -299,58 +300,60 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Quick Metrics & Actions */}
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase">MIND Price:</span>
-              <span className="text-xs font-bold text-emerald-400 font-mono">${MIND_PRICE_USD} USD</span>
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap sm:flex-nowrap justify-between sm:justify-end">
+            <div className="bg-slate-900/90 border border-slate-800 px-2 sm:px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+              <span className="text-[10px] font-mono text-slate-400 uppercase hidden xs:inline">Price:</span>
+              <span className="text-xs font-bold text-emerald-400 font-mono">${MIND_PRICE_USD}</span>
             </div>
 
             <button
               onClick={() => setShowWithdrawModal(true)}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-emerald-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-emerald-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              Withdraw
+              <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+              <span>Withdraw</span>
             </button>
 
             <button
               onClick={() => onOpenBuy(100)}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
+              className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1 cursor-pointer uppercase tracking-wider shrink-0 whitespace-nowrap"
             >
-              <Zap className="w-3.5 h-3.5" />
-              Buy MIND
+              <Zap className="w-3.5 h-3.5 shrink-0 fill-slate-950" />
+              <span>Buy MIND</span>
             </button>
 
-            <NavLink
-              to="/dashboard/profile"
-              className={({ isActive }) =>
-                `p-2 rounded-xl border transition-colors cursor-pointer ${
-                  isActive
-                    ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                }`
-              }
-              title="Profile Settings"
-            >
-              <User className="w-4 h-4" />
-            </NavLink>
+            <div className="flex items-center gap-1 shrink-0">
+              <NavLink
+                to="/dashboard/profile"
+                className={({ isActive }) =>
+                  `p-1.5 sm:p-2 rounded-xl border transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`
+                }
+                title="Profile Settings"
+              >
+                <User className="w-4 h-4" />
+              </NavLink>
 
-            <button
-              onClick={onLogout}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
-              title="Logout Session"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+              <button
+                onClick={onLogout}
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
+                title="Logout Session"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Dashboard Body */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Navigation Tabs with True React Router Links */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto no-scrollbar scroll-smooth">
           {[
             { to: '/dashboard', label: 'Dashboard Overview', icon: Layers, end: true },
             { to: '/dashboard/buy', label: 'Presale Terminal', icon: Zap, end: false },
@@ -365,7 +368,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 to={tab.to}
                 end={tab.end}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  `flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                     isActive
                       ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-inner'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -383,7 +386,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {isOverview && (
           <div className="space-y-6">
             {/* Top 3 Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Card 1: Total Available MIND Balance */}
               <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
                 <div className="flex justify-between items-start mb-2">
@@ -672,7 +675,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-xs font-mono min-w-[650px]">
                   <thead className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800 bg-slate-900/50">
                     <tr>
                       <th className="py-2.5 px-3">Order / Ref ID</th>
@@ -843,7 +846,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Transactions Table with Order ID */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full text-left text-xs font-mono min-w-[700px]">
                 <thead className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800 bg-slate-900/50">
                   <tr>
                     <th className="py-3 px-3">Order ID</th>
@@ -1115,8 +1118,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 3. TRANSACTION DETAILS MODAL */}
       {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto animate-in fade-in">
+          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full max-h-[92vh] flex flex-col p-5 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Hash className="w-5 h-5 text-cyan-400" />
@@ -1130,7 +1133,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
+            <div className="space-y-3 text-xs font-mono overflow-y-auto">
               <div className="flex justify-between py-1.5 border-b border-slate-800">
                 <span className="text-slate-400">Order ID:</span>
                 <span className="text-cyan-300 font-bold">{selectedTx.orderId || 'MND-ORD-N/A'}</span>
@@ -1182,8 +1185,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 4. WITHDRAW MODAL */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto animate-in fade-in">
+          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full max-h-[92vh] flex flex-col p-5 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl my-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <ArrowUpRight className="w-5 h-5 text-emerald-400" />
@@ -1200,7 +1203,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleWithdrawSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleWithdrawSubmit} className="space-y-4 text-xs overflow-y-auto">
               <div>
                 <label className="block text-slate-400 mb-1 font-bold">Destination EVM Address</label>
                 <input

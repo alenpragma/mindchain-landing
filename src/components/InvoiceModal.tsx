@@ -186,10 +186,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     .padStart(2, '0')}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
-      <div className="bg-[#1e293b] border border-slate-700/90 max-w-xl w-full rounded-2xl shadow-2xl overflow-hidden relative text-white my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+      <div className="bg-[#1e293b] border border-slate-700/90 max-w-xl w-full max-h-[92vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden relative text-white my-auto">
         {/* Top Gradient Highlight */}
-        <div className="h-1.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400"></div>
+        <div className="h-1.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 shrink-0"></div>
 
         {/* Close Button (disabled while confirming) */}
         <button
@@ -199,9 +199,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-6 sm:p-7 space-y-6">
+        <div className="p-4 sm:p-7 space-y-5 sm:space-y-6 overflow-y-auto">
           {/* Header & Status Indicator */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4 pr-8 sm:pr-0">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-mono font-bold text-cyan-400">
@@ -217,13 +217,13 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   </span>
                 )}
               </div>
-              <h3 className="text-xl font-black text-white mt-0.5">
+              <h3 className="text-lg sm:text-xl font-black text-white mt-0.5">
                 Automated Payment Invoice
               </h3>
             </div>
 
             <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span className="text-slate-400">Expires:</span>
               <span className="text-amber-400 font-bold">{formattedTime}</span>
             </div>

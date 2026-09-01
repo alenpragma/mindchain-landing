@@ -224,21 +224,21 @@ export const EcosystemGrid: React.FC<EcosystemGridProps> = ({ onSelectAction }) 
 
         {/* Detailed Modal when a card is clicked */}
         {selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <div className="bg-[#1e293b] border border-slate-700 max-w-lg w-full rounded-2xl p-6 shadow-2xl relative text-white space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in">
+            <div className="bg-[#1e293b] border border-slate-700 max-w-lg w-full max-h-[92vh] flex flex-col rounded-2xl p-5 sm:p-6 shadow-2xl relative text-white space-y-4 my-auto overflow-y-auto">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 border border-cyan-500/30 flex items-center justify-center">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-900 border border-cyan-500/30 flex items-center justify-center shrink-0">
                     {getIcon(selectedItem.id)}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">{selectedItem.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-white">{selectedItem.name}</h3>
                     <p className="text-xs font-mono text-cyan-400">{selectedItem.category}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedItem(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   ✕
                 </button>

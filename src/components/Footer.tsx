@@ -52,9 +52,31 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8 items-center">
           {/* Brand Col */}
           <div className="md:col-span-5 space-y-3">
-            <Link to="/" className="inline-flex items-center gap-2.5">
-              <div className="w-7 h-7 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-lg flex items-center justify-center text-slate-950 font-black text-sm">
-                M
+            <Link to="/" className="inline-flex items-center gap-2.5 group">
+              <div className="w-8 h-8 relative flex items-center justify-center shrink-0">
+                <svg
+                  viewBox="0 0 36 36"
+                  fill="none"
+                  className="w-full h-full transform group-hover:scale-105 transition-transform drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+                >
+                  <defs>
+                    <linearGradient id="mndFootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#22d3ee" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="36" height="36" rx="10" fill="#0f172a" stroke="url(#mndFootGrad)" strokeWidth="1.5" />
+                  <path
+                    d="M9 25V11L18 18L27 11V25"
+                    stroke="url(#mndFootGrad)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="18" cy="18" r="2" fill="#38bdf8" />
+                  <circle cx="9" cy="11" r="1.5" fill="#34d399" />
+                  <circle cx="27" cy="11" r="1.5" fill="#34d399" />
+                </svg>
               </div>
               <span className="text-base font-extrabold text-white">
                 MindChain <span className="text-cyan-400">L1</span>

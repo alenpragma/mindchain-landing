@@ -53,25 +53,50 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#0f172a]/85 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand / Logo Link to Home */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+        {/* Brand / Logo Link to Home with Crisp Web3 Vector Logo */}
         <Link
           to="/"
-          className="flex items-center gap-3 cursor-pointer group shrink-0"
+          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0"
         >
-          <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 via-teal-400 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300 transform group-hover:scale-105 border border-cyan-300/30">
-            <span className="text-slate-950 font-black text-xl tracking-tighter">M</span>
+          <div className="w-8 h-8 sm:w-9 sm:h-9 relative flex items-center justify-center shrink-0">
+            <svg
+              viewBox="0 0 36 36"
+              fill="none"
+              className="w-full h-full transform group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+            >
+              <defs>
+                <linearGradient id="mndNavGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#22d3ee" />
+                  <stop offset="50%" stopColor="#14b8a6" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+              </defs>
+              <rect width="36" height="36" rx="10" fill="#0f172a" stroke="url(#mndNavGrad)" strokeWidth="1.5" />
+              <path
+                d="M9 25V11L18 18L27 11V25"
+                stroke="url(#mndNavGrad)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="18" cy="18" r="2" fill="#38bdf8" />
+              <circle cx="9" cy="11" r="1.5" fill="#34d399" />
+              <circle cx="27" cy="11" r="1.5" fill="#34d399" />
+              <circle cx="9" cy="25" r="1.5" fill="#22d3ee" />
+              <circle cx="27" cy="25" r="1.5" fill="#22d3ee" />
+            </svg>
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="text-lg font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
                 MindChain
               </span>
-              <span className="bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider uppercase">
+              <span className="bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[9px] sm:text-[10px] font-black px-1.5 py-0.2 rounded uppercase font-mono shrink-0">
                 L1
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono tracking-wider -mt-1 hidden sm:block">
+            <span className="text-[9px] text-slate-400 font-mono tracking-wider -mt-0.5 hidden sm:block">
               EVM LAYER-1
             </span>
           </div>
@@ -140,77 +165,78 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </nav>
 
-        {/* Right Section: Price Badge & Auth Actions */}
-        <div className="flex items-center gap-3">
+        {/* Right Section: Adaptive Price Badge & Action Buttons */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Live Price Badge */}
-          <div className="bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-full flex items-center gap-2 shadow-inner">
-            <div className="relative flex h-2 w-2">
+          <div className="bg-slate-900/90 border border-slate-700/80 px-2 sm:px-2.5 py-1 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-inner shrink-0">
+            <div className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </div>
-            <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider hidden sm:inline">
+            <span className="text-[10px] sm:text-[11px] font-mono text-slate-400 uppercase tracking-wider hidden xs:inline">
               MIND:
             </span>
-            <span className="text-xs font-bold text-emerald-400 font-mono">
-              ${MIND_PRICE_USD.toFixed(2)} USD
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-400 font-mono whitespace-nowrap">
+              ${MIND_PRICE_USD}
             </span>
           </div>
 
           {/* User Auth Buttons / State */}
           {user ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <Link
                 to="/dashboard"
-                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+                className={`text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer ${
                   isDashboardActive
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
                     : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>My Dashboard</span>
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xs:inline">My </span>
+                <span>Dashboard</span>
               </Link>
 
               <div
                 onClick={handleCopy}
                 title="Click to copy address"
-                className="hidden lg:flex items-center gap-2 bg-slate-900 border border-slate-700 hover:border-slate-600 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors group"
+                className="hidden lg:flex items-center gap-2 bg-slate-900 border border-slate-700 hover:border-slate-600 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors group shrink-0"
               >
-                <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
+                <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></div>
                 <span className="text-xs font-mono text-cyan-300 font-medium">
                   {truncateAddress(user.address)}
                 </span>
                 {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 ) : (
-                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors shrink-0" />
                 )}
               </div>
 
               <button
                 onClick={onLogout}
                 title="Disconnect EVM Session"
-                className="p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border border-slate-700 text-slate-400 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border border-slate-700 text-slate-400 transition-colors cursor-pointer shrink-0 hidden sm:block"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 onClick={() => onOpenAuth('login')}
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               >
                 Connect
               </button>
               <button
                 onClick={onOpenBuy}
-                className="relative group overflow-hidden rounded-xl p-px font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                className="relative group overflow-hidden rounded-xl p-px font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 transition-all"></span>
-                <span className="relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-[11px] bg-slate-950 text-cyan-300 transition-colors group-hover:bg-transparent group-hover:text-slate-950 font-extrabold uppercase tracking-wider">
-                  <Zap className="w-3.5 h-3.5" />
-                  Buy MIND
+                <span className="relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-[11px] bg-slate-950 text-cyan-300 transition-colors group-hover:bg-transparent group-hover:text-slate-950 font-extrabold uppercase tracking-wider text-[11px] sm:text-xs whitespace-nowrap">
+                  <Zap className="w-3.5 h-3.5 shrink-0 fill-current" />
+                  <span>Buy MIND</span>
                 </span>
               </button>
             </div>
@@ -219,7 +245,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile Menu Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+            className="md:hidden p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer shrink-0"
+            aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
