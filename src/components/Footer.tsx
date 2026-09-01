@@ -1,5 +1,6 @@
 import React from 'react';
-import { ShieldCheck, FileCode2, Send, Globe, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShieldCheck, FileCode2, Send, Globe, ExternalLink, Zap } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -46,29 +47,32 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Simplified Footer Main Content */}
+      {/* 2. Footer Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8 items-center">
           {/* Brand Col */}
           <div className="md:col-span-5 space-y-3">
-            <div className="flex items-center gap-2.5">
+            <Link to="/" className="inline-flex items-center gap-2.5">
               <div className="w-7 h-7 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-lg flex items-center justify-center text-slate-950 font-black text-sm">
                 M
               </div>
               <span className="text-base font-extrabold text-white">
                 MindChain <span className="text-cyan-400">L1</span>
               </span>
-            </div>
+            </Link>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
               High-throughput EVM Layer-1 blockchain with institutional throughput, sub-second finality, and direct ecosystem bonus distribution.
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div className="md:col-span-4 flex flex-wrap gap-x-8 gap-y-2 text-xs font-mono">
-            <a href="#ecosystem" className="hover:text-cyan-400 transition-colors">Ecosystem Suite</a>
-            <a href="#specs" className="hover:text-cyan-400 transition-colors">L1 Comparison</a>
-            <a href="#faq" className="hover:text-cyan-400 transition-colors">Platform FAQ</a>
+          {/* Quick Internal & External Links */}
+          <div className="md:col-span-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-mono">
+            <Link to="/" className="hover:text-cyan-400 transition-colors">Home</Link>
+            <Link to="/presale" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
+              <Zap className="w-3 h-3 text-cyan-400" /> Presale Terminal
+            </Link>
+            <Link to="/ecosystem" className="hover:text-cyan-400 transition-colors">Ecosystem Suite</Link>
+            <Link to="/tokenomics" className="hover:text-cyan-400 transition-colors">L1 Comparison</Link>
             <a
               href="https://mindchain.info"
               target="_blank"

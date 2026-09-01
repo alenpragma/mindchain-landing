@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { UserAccount, Transaction, PaymentInvoice, AppliedCoupon } from './types';
 import { INITIAL_TRANSACTIONS, INITIAL_USER } from './utils/crypto';
 import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { EcosystemGrid } from './components/EcosystemGrid';
-import { TrustAndSpecs } from './components/TrustAndSpecs';
+import { Footer } from './components/Footer';
+import { ScrollToTop } from './components/ScrollToTop';
+import { ToastContainer, ToastMessage } from './components/Toast';
 import { AuthModal } from './components/AuthModal';
 import { InvoiceModal } from './components/InvoiceModal';
 import { Dashboard } from './components/Dashboard';
-import { Footer } from './components/Footer';
-import { ToastContainer, ToastMessage } from './components/Toast';
 
-export default function App() {
+import { HomePage } from './pages/HomePage';
+import { PresalePage } from './pages/PresalePage';
+import { EcosystemPage } from './pages/EcosystemPage';
+import { TokenomicsPage } from './pages/TokenomicsPage';
+import { Lock, Wallet, Zap, ShieldCheck } from 'lucide-react';
+
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // App state
   const [user, setUser] = useState<UserAccount | null>(() => {
     try {
@@ -22,7 +30,6 @@ export default function App() {
     }
   });
 
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing');
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem('mindchain_txs');
@@ -95,20 +102,23 @@ export default function App() {
       setPendingBuyAmount(null);
       setPendingCoupon(null);
     } else {
-      setCurrentView('dashboard');
+      // If current page is not already under /dashboard, navigate to /dashboard
+      if (!location.pathname.startsWith('/dashboard')) {
+        navigate('/dashboard');
+      }
     }
   };
 
   const handleLogout = () => {
     setUser(null);
-    setCurrentView('landing');
+    navigate('/');
     addToast('Disconnected', 'Your EVM session has been cleared.', 'info');
   };
 
   const handleOpenBuyFlow = (amount?: number, coupon?: AppliedCoupon | null) => {
     const finalAmount = amount || 100;
     const finalCoupon = coupon || null;
-    
+
     // Strict Gate: Must sign up or log in first before accessing payment invoice
     if (!user) {
       setPendingBuyAmount(finalAmount);
@@ -129,7 +139,6 @@ export default function App() {
   };
 
   const handlePaymentSuccess = (invoice: PaymentInvoice, completedTx: Transaction) => {
-    // If not logged in, login with the demo account or generate one
     let targetUser = user;
     if (!targetUser) {
       targetUser = {
@@ -156,8 +165,8 @@ export default function App() {
       'success'
     );
 
-    // Switch to dashboard
-    setCurrentView('dashboard');
+    // Switch to dashboard history or overview
+    navigate('/dashboard/history');
   };
 
   const handleAddTransaction = (newTx: Transaction) => {
@@ -166,60 +175,98 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col font-sans bg-grid-pattern relative selection:bg-cyan-500/30 selection:text-cyan-200">
+      <ScrollToTop />
+
       {/* Toast Notification Container */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Main Top Navigation */}
       <Navbar
         user={user}
-        currentView={currentView}
-        onNavigate={(view) => setCurrentView(view)}
         onOpenAuth={handleOpenAuth}
         onOpenBuy={() => handleOpenBuyFlow(100)}
         onLogout={handleLogout}
         onCopyAddress={(addr) => addToast('Address Copied', addr, 'info')}
       />
 
-      {/* Dynamic View Display */}
-      {currentView === 'landing' ? (
-        <main className="flex-1">
-          {/* Hero Section with Bonus Calculator */}
-          <Hero
-            isLoggedIn={!!user}
-            onBuyClick={(amount, coupon) => handleOpenBuyFlow(amount, coupon)}
-            onExploreClick={() => {
-              document.getElementById('ecosystem')?.scrollIntoView({ behavior: 'smooth' });
-            }}
+      {/* Dynamic View Routing */}
+      <div className="flex-1 flex flex-col">
+        <Routes>
+          {/* Landing / Home Page */}
+          <Route
+            path="/"
+            element={<HomePage isLoggedIn={!!user} onOpenBuyFlow={handleOpenBuyFlow} />}
+          />
+          <Route path="/home" element={<Navigate to="/" replace />} />
+
+          {/* Dedicated Presale Page */}
+          <Route
+            path="/presale"
+            element={<PresalePage isLoggedIn={!!user} onOpenBuyFlow={handleOpenBuyFlow} />}
           />
 
-          {/* Ecosystem Grid (CEX, DEX, DeFi, Wallet, Explorer, Academy) */}
-          <EcosystemGrid onSelectAction={() => handleOpenBuyFlow(100)} />
+          {/* Ecosystem Page */}
+          <Route
+            path="/ecosystem"
+            element={<EcosystemPage onOpenBuyFlow={handleOpenBuyFlow} />}
+          />
 
-          {/* Comparison Matrix & Tokenomics */}
-          <TrustAndSpecs />
-        </main>
-      ) : user ? (
-        <Dashboard
-          user={user}
-          transactions={transactions}
-          onOpenBuy={(amount, coupon) => handleOpenBuyFlow(amount, coupon)}
-          onLogout={handleLogout}
-          onUpdateUser={(updated) => setUser(updated)}
-          onAddTransaction={handleAddTransaction}
-          onShowToast={addToast}
-        />
-      ) : (
-        // Fallback if view is dashboard but no user
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <p className="text-slate-400 mb-4">Please connect your EVM session to view your dashboard.</p>
-          <button
-            onClick={() => handleOpenAuth('login')}
-            className="px-6 py-3 bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black rounded-xl"
-          >
-            Connect EVM Session
-          </button>
-        </div>
-      )}
+          {/* Tokenomics & Comparison Page */}
+          <Route path="/tokenomics" element={<TokenomicsPage />} />
+          <Route path="/specs" element={<Navigate to="/tokenomics" replace />} />
+
+          {/* Dashboard and Subroutes */}
+          <Route
+            path="/dashboard/*"
+            element={
+              user ? (
+                <Dashboard
+                  user={user}
+                  transactions={transactions}
+                  onOpenBuy={(amount, coupon) => handleOpenBuyFlow(amount, coupon)}
+                  onLogout={handleLogout}
+                  onUpdateUser={(updated) => setUser(updated)}
+                  onAddTransaction={handleAddTransaction}
+                  onShowToast={addToast}
+                />
+              ) : (
+                /* Gated Unauthenticated Dashboard Fallback */
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-12">
+                  <div className="max-w-md w-full bg-[#1e293b]/70 border border-slate-800 rounded-3xl p-8 space-y-6 shadow-2xl">
+                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto">
+                      <Lock className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-bold text-white">Dashboard Access Locked</h2>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Connect your Web3 EVM wallet session or sign in to access your portfolio balance, referral commissions, and order records.
+                      </p>
+                    </div>
+                    <div className="space-y-3 pt-2">
+                      <button
+                        onClick={() => handleOpenAuth('login')}
+                        className="w-full py-3 bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        Connect EVM Session
+                      </button>
+                      <button
+                        onClick={() => handleOpenAuth('signup')}
+                        className="w-full py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Create New Account
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+          />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
 
       {/* Footer */}
       <Footer />
@@ -241,5 +288,13 @@ export default function App() {
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }

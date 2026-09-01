@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate, NavLink, Routes, Route, Navigate } from 'react-router-dom';
 import { UserAccount, Transaction, AppliedCoupon, ReferralRecord, TransactionType } from '../types';
 import {
   MIND_PRICE_USD,
@@ -31,6 +32,8 @@ import {
   Save,
   Hash,
   Sparkles,
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -52,7 +55,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddTransaction,
   onShowToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'referrals' | 'history' | 'profile'>('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Clipboard states
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [copiedTxHash, setCopiedTxHash] = useState(false);
@@ -63,6 +69,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [withdrawAddress, setWithdrawAddress] = useState(user.address);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+
+  // Sync withdraw address when user changes
+  useEffect(() => {
+    setWithdrawAddress(user.address);
+  }, [user.address]);
 
   // ==============================
   // 1. TRANSACTION HISTORY FILTERS & PAGINATION
@@ -75,15 +86,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      // Type filter
       if (txTypeFilter !== 'all' && tx.type !== txTypeFilter) {
         return false;
       }
-      // Status filter
       if (txStatusFilter !== 'all' && tx.status !== txStatusFilter) {
         return false;
       }
-      // Search filter (Order ID, TxHash, Note)
       if (txSearchQuery.trim()) {
         const query = txSearchQuery.trim().toLowerCase();
         const orderIdMatch = tx.orderId?.toLowerCase().includes(query);
@@ -141,7 +149,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  // Total MIND earned from referrals
   const totalRefMIND = user.referralEarningsMIND || referralsList.reduce((acc, curr) => acc + curr.bonusEarnedMIND, 0);
 
   // ==============================
@@ -154,6 +161,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
   const [profilePhone, setProfilePhone] = useState(user.phone || '+1 (512) 555-0198');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Keep state updated if user prop updates
+  useEffect(() => {
+    if (user.name) setProfileName(user.name);
+    if (user.email) setProfileEmail(user.email);
+    if (user.physicalAddress) setProfileAddress(user.physicalAddress);
+    if (user.phone) setProfilePhone(user.phone);
+  }, [user]);
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }, 600);
   };
 
-  // Copy referral & address helpers
+  // Referral link
   const referralLink = `https://mindchain.info/ref?id=${user.address.toLowerCase()}`;
 
   const handleCopyReferral = () => {
@@ -197,7 +212,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setTimeout(() => setCopiedTxHash(false), 2000);
   };
 
-  // Withdraw action
+  // Withdraw submit
   const handleWithdrawSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setWithdrawError(null);
@@ -240,6 +255,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'info'
     );
   };
+
+  // Determine current active subroute
+  const currentPath = location.pathname;
+  const isOverview = currentPath === '/dashboard' || currentPath === '/dashboard/';
+  const isBuy = currentPath.startsWith('/dashboard/buy');
+  const isReferrals = currentPath.startsWith('/dashboard/referrals');
+  const isHistory = currentPath.startsWith('/dashboard/history');
+  const isProfile = currentPath.startsWith('/dashboard/profile');
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200">
@@ -299,17 +322,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Buy MIND
             </button>
 
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                activeTab === 'profile'
-                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-              }`}
+            <NavLink
+              to="/dashboard/profile"
+              className={({ isActive }) =>
+                `p-2 rounded-xl border transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                }`
+              }
               title="Profile Settings"
             >
               <User className="w-4 h-4" />
-            </button>
+            </NavLink>
 
             <button
               onClick={onLogout}
@@ -324,35 +349,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Main Dashboard Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs with True React Router Links */}
         <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
           {[
-            { id: 'overview', label: 'Dashboard Overview', icon: Layers },
-            { id: 'buy', label: 'Presale Terminal', icon: Zap },
-            { id: 'referrals', label: 'Referral Rewards (+15% MIND)', icon: Users },
-            { id: 'history', label: `Transaction History (${transactions.length})`, icon: Clock },
-            { id: 'profile', label: 'Profile Settings', icon: User },
+            { to: '/dashboard', label: 'Dashboard Overview', icon: Layers, end: true },
+            { to: '/dashboard/buy', label: 'Presale Terminal', icon: Zap, end: false },
+            { to: '/dashboard/referrals', label: 'Referral Rewards (+15% MIND)', icon: Users, end: false },
+            { to: '/dashboard/history', label: `Transaction History (${transactions.length})`, icon: Clock, end: false },
+            { to: '/dashboard/profile', label: 'Profile Settings', icon: User, end: false },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-inner'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                end={tab.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-inner'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`
+                }
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-              </button>
+              </NavLink>
             );
           })}
         </div>
 
-        {/* 1. TOP METRICS ROW & REFERRAL BANNER: ONLY SHOWN ON OVERVIEW TAB */}
-        {activeTab === 'overview' && (
+        {/* 1. TOP METRICS ROW & REFERRAL BANNER: ONLY ON /dashboard (Overview) */}
+        {isOverview && (
           <div className="space-y-6">
             {/* Top 3 Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -417,12 +445,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <p className="text-xs text-amber-400 font-mono font-bold">
                     ≈ {formatUSD(totalRefMIND * MIND_PRICE_USD)} USD ({user.referralsCount} Invites)
                   </p>
-                  <button
-                    onClick={() => setActiveTab('referrals')}
+                  <NavLink
+                    to="/dashboard/referrals"
                     className="text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer underline"
                   >
                     View List <ChevronRight className="w-3 h-3" />
-                  </button>
+                  </NavLink>
                 </div>
               </div>
             </div>
@@ -460,10 +488,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* 2. DYNAMIC TAB CONTENT */}
+        {/* 2. DYNAMIC ROUTE-DRIVEN CONTENT */}
 
-        {/* TAB 1: OVERVIEW */}
-        {activeTab === 'overview' && (
+        {/* SUBROUTE 1: /dashboard (OVERVIEW) */}
+        {isOverview && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left: Presale Buy Terminal Widget */}
             <div className="lg:col-span-7 space-y-6">
@@ -480,12 +508,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       Recent Activity
                     </h3>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('history')}
+                  <NavLink
+                    to="/dashboard/history"
                     className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
                   >
                     View All ({transactions.length}) <ChevronRight className="w-3 h-3" />
-                  </button>
+                  </NavLink>
                 </div>
 
                 <div className="divide-y divide-slate-800/80 overflow-y-auto max-h-[500px]">
@@ -539,15 +567,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 2: PRESALE TERMINAL (CLEAN & DEDICATED) */}
-        {activeTab === 'buy' && (
+        {/* SUBROUTE 2: /dashboard/buy (PRESALE TERMINAL) */}
+        {isBuy && (
           <div className="max-w-2xl mx-auto py-2">
             <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
           </div>
         )}
 
-        {/* TAB 3: REFERRALS WITH MIND BONUS & PAGINATED LIST */}
-        {activeTab === 'referrals' && (
+        {/* SUBROUTE 3: /dashboard/referrals (REFERRAL REWARDS) */}
+        {isReferrals && (
           <div className="max-w-5xl mx-auto space-y-6">
             {/* Top Stats Overview */}
             <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -739,8 +767,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 4: COMPLETE TRANSACTION HISTORY (CLEAN & DEDICATED) */}
-        {activeTab === 'history' && (
+        {/* SUBROUTE 4: /dashboard/history (TRANSACTIONS) */}
+        {isHistory && (
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-6">
             {/* Header & Filter Controls Bar */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
@@ -929,8 +957,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 5: PROFILE UPDATE SETTINGS */}
-        {activeTab === 'profile' && (
+        {/* SUBROUTE 5: /dashboard/profile (PROFILE SETTINGS) */}
+        {isProfile && (
           <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -995,84 +1023,86 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
 
-                {/* 2. Full Name */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-cyan-400" />
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="e.g. Alexander Wright"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors"
-                  />
+                {/* 2. Full Name & Email Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-cyan-400" />
+                      Full Name / Investor Alias
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="e.g. Alexander Wright"
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl py-2.5 px-3 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      placeholder="name@domain.com"
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl py-2.5 px-3 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                    />
+                  </div>
                 </div>
 
-                {/* 3. Email Address */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-cyan-400" />
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={profileEmail}
-                    onChange={(e) => setProfileEmail(e.target.value)}
-                    placeholder="investor@example.com"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
-                  />
+                {/* 3. Physical Address & Phone */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                      Physical / Mailing Address
+                    </label>
+                    <input
+                      type="text"
+                      value={profileAddress}
+                      onChange={(e) => setProfileAddress(e.target.value)}
+                      placeholder="Street, Suite, City, State, ZIP, Country"
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl py-2.5 px-3 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                      Phone / Telegram Contact
+                    </label>
+                    <input
+                      type="text"
+                      value={profilePhone}
+                      onChange={(e) => setProfilePhone(e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl py-2.5 px-3 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                    />
+                  </div>
                 </div>
 
-                {/* 4. Physical Address */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                    Physical / Mailing Address
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={profileAddress}
-                    onChange={(e) => setProfileAddress(e.target.value)}
-                    placeholder="Street address, Suite, City, State, Country"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors resize-none"
-                  />
-                </div>
-
-                {/* 5. Phone Number */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                    Contact Phone / Telegram (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={profilePhone}
-                    onChange={(e) => setProfilePhone(e.target.value)}
-                    placeholder="+1 (512) 555-0198"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
-                  />
-                </div>
-
-                {/* Save Button */}
-                <div className="pt-2">
+                {/* Submit button */}
+                <div className="pt-2 flex items-center justify-end gap-3">
                   <button
                     type="submit"
                     disabled={isSavingProfile}
-                    className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 font-black rounded-xl uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
                   >
                     {isSavingProfile ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                         Saving Changes...
                       </>
                     ) : (
                       <>
-                        <Save className="w-4 h-4 text-slate-950" />
-                        Save Profile Changes
+                        <Save className="w-4 h-4" />
+                        Save Profile Details
                       </>
                     )}
                   </button>
@@ -1083,179 +1113,171 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
       </main>
 
-      {/* WITHDRAW MODAL */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-[#1e293b] border border-slate-700 max-w-md w-full rounded-2xl p-6 shadow-2xl text-white space-y-4 relative">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <ArrowUpRight className="w-5 h-5 text-emerald-400" /> Withdraw MIND
-              </h3>
-              <button
-                onClick={() => setShowWithdrawModal(false)}
-                className="text-slate-400 hover:text-white p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {withdrawError && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300">
-                {withdrawError}
-              </div>
-            )}
-
-            <form onSubmit={handleWithdrawSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Recipient EVM Address
-                </label>
-                <input
-                  type="text"
-                  value={withdrawAddress}
-                  onChange={(e) => setWithdrawAddress(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-3 text-xs font-mono text-white outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1 text-xs">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Amount (MIND)
-                  </label>
-                  <span className="text-slate-400 font-mono text-[11px]">
-                    Available: {formatNumber(user.balanceMIND)} MIND
-                  </span>
-                </div>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="50.00"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-mono text-white font-bold outline-none focus:border-cyan-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawAmount(user.balanceMIND.toString())}
-                    className="absolute right-2.5 px-2 py-0.5 bg-slate-800 text-cyan-400 text-xs font-mono rounded border border-slate-700 cursor-pointer"
-                  >
-                    MAX
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs font-mono space-y-1.5 text-slate-400">
-                <div className="flex justify-between">
-                  <span>Network Gas:</span>
-                  <span className="text-emerald-400">&lt; 0.0001 MIND</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Estimated Arrival:</span>
-                  <span className="text-slate-200">~0.8 seconds (Instant)</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-900 text-cyan-300">
-                  <span>Destination:</span>
-                  <span>Personal EVM / mindchain.info</span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-cyan-950/30 rounded-xl border border-cyan-500/20 text-[11px] text-cyan-300/90 font-mono">
-                💡 <strong>Tip:</strong> Once withdrawn to your address, you can freely transfer, trade, or stake your MIND anytime on the main network at{' '}
-                <a href="https://mindchain.info" target="_blank" rel="noreferrer" className="underline font-bold text-white hover:text-cyan-200">
-                  mindchain.info
-                </a>.
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black rounded-xl uppercase text-xs tracking-wider shadow-lg transition-all cursor-pointer"
-              >
-                Confirm Withdrawal
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* TRANSACTION DETAILS MODAL WITH ORDER ID & TX HASH */}
+      {/* 3. TRANSACTION DETAILS MODAL */}
       {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-[#1e293b] border border-slate-700 max-w-md w-full rounded-2xl p-6 shadow-2xl text-white space-y-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-white capitalize flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-cyan-400" />
-                  Transaction & Order Details
-                </h3>
-                <span className="text-xs font-mono text-cyan-400 font-bold">
-                  {selectedTx.orderId || 'MND-ORD-N/A'}
-                </span>
+              <div className="flex items-center gap-2">
+                <Hash className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-white font-mono">Order Details</h3>
               </div>
               <button
                 onClick={() => setSelectedTx(null)}
-                className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-800 rounded-lg cursor-pointer"
               >
-                ✕
+                Close
               </button>
             </div>
 
             <div className="space-y-3 text-xs font-mono">
-              <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Order ID:</span>
-                  <span className="text-cyan-300 font-bold">{selectedTx.orderId || 'MND-ORD-N/A'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Transaction Type:</span>
-                  <span className="text-white capitalize font-bold">{selectedTx.type.replace('_', ' ')}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Amount (MIND):</span>
-                  <span className="text-cyan-400 font-bold">{formatNumber(selectedTx.amountMIND)} MIND</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">USD Value:</span>
-                  <span className="text-white">{formatUSD(selectedTx.amountUSD)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Timestamp:</span>
-                  <span className="text-slate-300">{selectedTx.timestamp}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Status:</span>
-                  <span className="text-emerald-400 font-bold uppercase">{selectedTx.status}</span>
-                </div>
-                {selectedTx.note && (
-                  <div className="pt-2 border-t border-slate-900 text-slate-400 text-[11px]">
-                    <span className="text-slate-500">Note:</span> {selectedTx.note}
-                  </div>
-                )}
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">Order ID:</span>
+                <span className="text-cyan-300 font-bold">{selectedTx.orderId || 'MND-ORD-N/A'}</span>
               </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
-                  <span>On-Chain Transaction Hash</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">Type:</span>
+                <span className="text-white font-bold capitalize">{selectedTx.type}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">MIND Coins:</span>
+                <span className="text-cyan-400 font-bold">{formatNumber(selectedTx.amountMIND)} MIND</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">USD Value:</span>
+                <span className="text-emerald-400 font-bold">{formatUSD(selectedTx.amountUSD)}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">Timestamp:</span>
+                <span className="text-slate-300">{selectedTx.timestamp}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800">
+                <span className="text-slate-400">Status:</span>
+                <span className="text-emerald-400 font-bold uppercase">{selectedTx.status}</span>
+              </div>
+              <div className="pt-2">
+                <span className="text-slate-400 block mb-1">On-Chain Transaction Hash:</span>
+                <div className="flex items-center gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-300 truncate text-[11px] select-all">{selectedTx.txHash}</span>
                   <button
                     onClick={() => handleCopyTxHash(selectedTx.txHash)}
-                    className="text-cyan-400 hover:text-cyan-300 cursor-pointer flex items-center gap-1"
+                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg cursor-pointer shrink-0"
+                    title="Copy Hash"
                   >
                     {copiedTxHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    Copy
                   </button>
-                </label>
-                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-cyan-300 break-all select-all font-mono">
-                  {selectedTx.txHash}
                 </div>
               </div>
             </div>
 
             <button
               onClick={() => setSelectedTx(null)}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-white transition-colors cursor-pointer"
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
-              Close
+              Done
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 4. WITHDRAW MODAL */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#1e293b] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <ArrowUpRight className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">Withdraw MIND Coins</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWithdrawModal(false);
+                  setWithdrawError(null);
+                }}
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-800 rounded-lg cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handleWithdrawSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1 font-bold">Destination EVM Address</label>
+                <input
+                  type="text"
+                  required
+                  value={withdrawAddress}
+                  onChange={(e) => setWithdrawAddress(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl p-2.5 font-mono text-cyan-300 outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 font-bold">Withdraw Amount (MIND)</label>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Available: <strong className="text-cyan-400">{formatNumber(user.balanceMIND)} MIND</strong>
+                  </span>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    min="50"
+                    max={user.balanceMIND}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Min. 50 MIND"
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl p-2.5 font-mono text-white outline-none pr-16"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawAmount(user.balanceMIND.toString())}
+                    className="absolute right-2 text-[10px] font-mono font-bold px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded cursor-pointer"
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
+
+              {withdrawError && (
+                <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[11px]">
+                  {withdrawError}
+                </div>
+              )}
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1 text-[11px] font-mono">
+                <div className="flex justify-between text-slate-400">
+                  <span>Network Gas Fee:</span>
+                  <span className="text-emerald-400 font-bold">0.0001 MIND (Subsidized)</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Dispatch Target:</span>
+                  <span className="text-cyan-300">MindChain Mainnet</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawError(null);
+                  }}
+                  className="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={user.balanceMIND < 50}
+                  className="w-1/2 py-2.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-bold rounded-xl disabled:opacity-40 cursor-pointer"
+                >
+                  Confirm Withdraw
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

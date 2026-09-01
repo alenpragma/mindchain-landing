@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { UserAccount } from '../types';
 import { MIND_PRICE_USD, truncateAddress } from '../utils/crypto';
 import {
@@ -14,12 +15,12 @@ import {
   ShieldCheck,
   Zap,
   HelpCircle,
+  BarChart3,
+  User,
 } from 'lucide-react';
 
 interface NavbarProps {
   user: UserAccount | null;
-  currentView: 'landing' | 'dashboard';
-  onNavigate: (view: 'landing' | 'dashboard') => void;
   onOpenAuth: (mode?: 'login' | 'signup') => void;
   onOpenBuy: () => void;
   onLogout: () => void;
@@ -28,8 +29,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   user,
-  currentView,
-  onNavigate,
   onOpenAuth,
   onOpenBuy,
   onLogout,
@@ -37,6 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,12 +49,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const isDashboardActive = location.pathname.startsWith('/dashboard');
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#0f172a]/85 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand / Logo */}
-        <div
-          onClick={() => onNavigate('landing')}
+        {/* Brand / Logo Link to Home */}
+        <Link
+          to="/"
           className="flex items-center gap-3 cursor-pointer group shrink-0"
         >
           <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 via-teal-400 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300 transform group-hover:scale-105 border border-cyan-300/30">
@@ -72,64 +75,69 @@ export const Navbar: React.FC<NavbarProps> = ({
               EVM LAYER-1
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-medium text-slate-300">
-          <button
-            onClick={() => onNavigate('landing')}
-            className={`transition-colors py-1 hover:text-cyan-400 cursor-pointer ${
-              currentView === 'landing' ? 'text-cyan-400 font-semibold' : 'text-slate-300'
-            }`}
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `transition-colors py-1 hover:text-cyan-400 cursor-pointer ${
+                isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300'
+              }`
+            }
           >
             Home
-          </button>
-          <a
-            href="#ecosystem"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                onNavigate('landing');
-                setTimeout(() => {
-                  document.getElementById('ecosystem')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }
-            }}
-            className="hover:text-cyan-400 transition-colors py-1"
+          </NavLink>
+
+          <NavLink
+            to="/presale"
+            className={({ isActive }) =>
+              `transition-colors py-1 hover:text-cyan-400 cursor-pointer flex items-center gap-1 ${
+                isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300'
+              }`
+            }
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            Presale
+          </NavLink>
+
+          <NavLink
+            to="/ecosystem"
+            className={({ isActive }) =>
+              `transition-colors py-1 hover:text-cyan-400 cursor-pointer ${
+                isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300'
+              }`
+            }
           >
             Ecosystem
-          </a>
-          <a
-            href="#specs"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                onNavigate('landing');
-                setTimeout(() => {
-                  document.getElementById('specs')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }
-            }}
-            className="hover:text-cyan-400 transition-colors py-1"
+          </NavLink>
+
+          <NavLink
+            to="/tokenomics"
+            className={({ isActive }) =>
+              `transition-colors py-1 hover:text-cyan-400 cursor-pointer ${
+                isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300'
+              }`
+            }
           >
             L1 Comparison
-          </a>
-          <a
-            href="#faq"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                onNavigate('landing');
-                setTimeout(() => {
-                  document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
+          </NavLink>
+
+          {user && (
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                `transition-colors py-1 hover:text-cyan-400 cursor-pointer flex items-center gap-1.5 ${
+                  isActive || isDashboardActive ? 'text-cyan-400 font-semibold' : 'text-slate-300'
+                }`
               }
-            }}
-            className="hover:text-cyan-400 transition-colors py-1 flex items-center gap-1.5"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-            FAQ
-          </a>
+            >
+              <Layers className="w-3.5 h-3.5 text-cyan-400" />
+              Dashboard
+            </NavLink>
+          )}
         </nav>
 
         {/* Right Section: Price Badge & Auth Actions */}
@@ -151,17 +159,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Auth Buttons / State */}
           {user ? (
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => onNavigate(currentView === 'dashboard' ? 'landing' : 'dashboard')}
+              <Link
+                to="/dashboard"
                 className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
-                  currentView === 'dashboard'
+                  isDashboardActive
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
                     : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                {currentView === 'dashboard' ? 'Presale Home' : 'My Dashboard'}
-              </button>
+                <span>My Dashboard</span>
+              </Link>
 
               <div
                 onClick={handleCopy}
@@ -182,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onLogout}
                 title="Disconnect EVM Session"
-                className="p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border border-slate-700 text-slate-400 transition-colors"
+                className="p-2 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 border border-slate-700 text-slate-400 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -191,13 +199,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onOpenAuth('login')}
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Connect
               </button>
               <button
                 onClick={onOpenBuy}
-                className="relative group overflow-hidden rounded-xl p-px font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="relative group overflow-hidden rounded-xl p-px font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 transition-all"></span>
                 <span className="relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-[11px] bg-slate-950 text-cyan-300 transition-colors group-hover:bg-transparent group-hover:text-slate-950 font-extrabold uppercase tracking-wider">
@@ -211,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile Menu Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -222,70 +230,44 @@ export const Navbar: React.FC<NavbarProps> = ({
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-slate-800 bg-[#0b1120]/98 backdrop-blur-2xl px-4 pt-3 pb-6 space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col space-y-1 text-sm font-medium">
-            <button
-              onClick={() => {
-                onNavigate('landing');
-                setMobileMenuOpen(false);
-              }}
-              className={`text-left px-3.5 py-2.5 rounded-xl transition-colors ${
-                currentView === 'landing'
-                  ? 'bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/20'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             >
               Home
-            </button>
-            <button
-              onClick={() => {
-                onNavigate('landing');
-                setMobileMenuOpen(false);
-                setTimeout(() => {
-                  document.getElementById('ecosystem')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
+            </Link>
+            <Link
+              to="/presale"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3.5 py-2.5 rounded-xl text-cyan-300 font-bold hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            >
+              <Zap className="w-4 h-4 text-cyan-400" />
+              Presale Terminal
+            </Link>
+            <Link
+              to="/ecosystem"
+              onClick={() => setMobileMenuOpen(false)}
               className="text-left px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             >
-              Ecosystem
-            </button>
-            <button
-              onClick={() => {
-                onNavigate('landing');
-                setMobileMenuOpen(false);
-                setTimeout(() => {
-                  document.getElementById('specs')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
+              Ecosystem Products
+            </Link>
+            <Link
+              to="/tokenomics"
+              onClick={() => setMobileMenuOpen(false)}
               className="text-left px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             >
-              L1 Comparison
-            </button>
-            <button
-              onClick={() => {
-                onNavigate('landing');
-                setMobileMenuOpen(false);
-                setTimeout(() => {
-                  document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
-              className="text-left px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center justify-between"
-            >
-              <span>Platform FAQ</span>
-              <HelpCircle className="w-4 h-4 text-cyan-400" />
-            </button>
+              L1 Comparison & Specs
+            </Link>
             {user && (
-              <button
-                onClick={() => {
-                  onNavigate('dashboard');
-                  setMobileMenuOpen(false);
-                }}
-                className={`text-left px-3.5 py-2.5 rounded-xl transition-colors font-bold ${
-                  currentView === 'dashboard'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                    : 'bg-slate-800/80 text-cyan-400 hover:bg-slate-800'
-                }`}
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-left px-3.5 py-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 flex items-center gap-2"
               >
+                <Layers className="w-4 h-4" />
                 My Dashboard
-              </button>
+              </Link>
             )}
           </div>
 
@@ -296,7 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onOpenAuth('login');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full py-3 bg-slate-800/90 hover:bg-slate-700 rounded-xl text-center text-xs font-bold text-white border border-slate-700 transition-colors"
+                className="w-full py-3 bg-slate-800/90 hover:bg-slate-700 rounded-xl text-center text-xs font-bold text-white border border-slate-700 transition-colors cursor-pointer"
               >
                 Connect EVM Wallet
               </button>
@@ -305,7 +287,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onOpenBuy();
                   setMobileMenuOpen(false);
                 }}
-                className="w-full py-3 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 rounded-xl text-center text-xs font-black text-slate-950 uppercase tracking-wider shadow-lg shadow-cyan-500/20"
+                className="w-full py-3 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 rounded-xl text-center text-xs font-black text-slate-950 uppercase tracking-wider shadow-lg shadow-cyan-500/20 cursor-pointer"
               >
                 Buy MIND (USDT BEP-20)
               </button>
@@ -321,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onLogout();
                   setMobileMenuOpen(false);
                 }}
-                className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 transition-colors"
+                className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" /> Disconnect
               </button>
