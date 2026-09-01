@@ -93,13 +93,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         } else {
           // If demo address or first login with no saved pass, authenticate and create session
+          const isDemo = lowerAddr === DEMO_USER_ADDRESS.toLowerCase();
           const newUser: UserAccount = {
             address: trimmedAddress,
             pin,
-            balanceMIND: lowerAddr === DEMO_USER_ADDRESS.toLowerCase() ? 3896.25 : 0,
-            totalDepositedUSD: lowerAddr === DEMO_USER_ADDRESS.toLowerCase() ? 1575.0 : 0,
-            referralsCount: 0,
-            referralEarningsUSD: 0,
+            name: isDemo ? 'Arif Hossain' : 'Web3 Pioneer',
+            email: isDemo ? 'helloedulife@gmail.com' : '',
+            physicalAddress: isDemo ? 'Gulshan-2, Dhaka 1212, Bangladesh' : '',
+            phone: isDemo ? '+880 1712-345678' : '',
+            balanceMIND: isDemo ? 5432.80 : 0,
+            totalDepositedUSD: isDemo ? 1750.0 : 0,
+            referralsCount: isDemo ? 8 : 0,
+            referralEarningsMIND: isDemo ? 1591.47 : 0,
+            referralEarningsUSD: isDemo ? 652.50 : 0,
             referralCode: `MIND-${trimmedAddress.substring(2, 7).toUpperCase()}`,
             joinedDate: 'August 2026',
           };
@@ -114,9 +120,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         const newUser: UserAccount = {
           address: trimmedAddress,
           pin,
+          name: 'Web3 Pioneer',
+          email: '',
+          physicalAddress: '',
+          phone: '',
           balanceMIND: 0,
           totalDepositedUSD: 0,
           referralsCount: 0,
+          referralEarningsMIND: 0,
           referralEarningsUSD: 0,
           referralCode: `MIND-${trimmedAddress.substring(2, 7).toUpperCase()}`,
           joinedDate: 'August 2026',
@@ -131,9 +142,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const fallbackUser: UserAccount = {
         address: trimmedAddress,
         pin,
+        name: 'Web3 Pioneer',
+        email: '',
+        physicalAddress: '',
+        phone: '',
         balanceMIND: 0,
         totalDepositedUSD: 0,
         referralsCount: 0,
+        referralEarningsMIND: 0,
         referralEarningsUSD: 0,
         referralCode: `MIND-${trimmedAddress.substring(2, 7).toUpperCase()}`,
         joinedDate: 'August 2026',

@@ -124,6 +124,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
       const completedTx: Transaction = {
         id: `tx-${Date.now()}`,
+        orderId: invoice.invoiceId,
         type: 'buy',
         amountMIND: invoice.totalMind,
         amountUSD: invoice.usdAmount,
@@ -155,6 +156,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
     const completedTx: Transaction = {
       id: `tx-${Date.now()}`,
+      orderId: invoice.invoiceId,
       type: 'buy',
       amountMIND: invoice.totalMind,
       amountUSD: invoice.usdAmount,

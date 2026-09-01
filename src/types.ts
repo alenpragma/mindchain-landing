@@ -1,9 +1,14 @@
 export interface UserAccount {
   address: string;
   pin?: string;
+  name?: string;
+  email?: string;
+  physicalAddress?: string;
+  phone?: string;
   balanceMIND: number;
   totalDepositedUSD: number;
   referralsCount: number;
+  referralEarningsMIND: number;
   referralEarningsUSD: number;
   referralCode: string;
   joinedDate: string;
@@ -14,6 +19,7 @@ export type TransactionStatus = 'completed' | 'pending' | 'processing';
 
 export interface Transaction {
   id: string;
+  orderId: string;
   type: TransactionType;
   amountMIND: number;
   amountUSD: number;
@@ -21,6 +27,17 @@ export interface Transaction {
   timestamp: string;
   status: TransactionStatus;
   note?: string;
+}
+
+export interface ReferralRecord {
+  id: string;
+  orderId: string;
+  referredUserAddress: string;
+  referredUserName?: string;
+  joinedDate: string;
+  depositUSD: number;
+  bonusEarnedMIND: number;
+  status: 'Completed' | 'Pending' | 'Active';
 }
 
 export interface AppliedCoupon {

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { UserAccount, Transaction, AppliedCoupon } from '../types';
+import React, { useState, useMemo } from 'react';
+import { UserAccount, Transaction, AppliedCoupon, ReferralRecord, TransactionType } from '../types';
 import {
   MIND_PRICE_USD,
+  INITIAL_REFERRALS,
   formatNumber,
   formatUSD,
   truncateAddress,
@@ -17,9 +18,24 @@ import {
   Zap,
   ArrowUpRight,
   Layers,
-  Coins,
   Clock,
   LogOut,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Mail,
+  MapPin,
+  Phone,
+  Lock,
+  Shield,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  Hash,
+  ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -41,9 +57,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddTransaction,
   onShowToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'referrals' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'referrals' | 'history' | 'profile'>('overview');
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(false);
+  const [copiedTxHash, setCopiedTxHash] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   // Withdraw modal state
@@ -52,20 +69,135 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
+  // ==============================
+  // 1. TRANSACTION HISTORY FILTERS & PAGINATION
+  // ==============================
+  const [txSearchQuery, setTxSearchQuery] = useState('');
+  const [txTypeFilter, setTxTypeFilter] = useState<'all' | TransactionType>('all');
+  const [txStatusFilter, setTxStatusFilter] = useState<string>('all');
+  const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const txPerPage = 5;
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      // Type filter
+      if (txTypeFilter !== 'all' && tx.type !== txTypeFilter) {
+        return false;
+      }
+      // Status filter
+      if (txStatusFilter !== 'all' && tx.status !== txStatusFilter) {
+        return false;
+      }
+      // Search filter (Order ID, TxHash, Note)
+      if (txSearchQuery.trim()) {
+        const query = txSearchQuery.trim().toLowerCase();
+        const orderIdMatch = tx.orderId?.toLowerCase().includes(query);
+        const hashMatch = tx.txHash?.toLowerCase().includes(query);
+        const noteMatch = tx.note?.toLowerCase().includes(query);
+        const typeMatch = tx.type?.toLowerCase().includes(query);
+        if (!orderIdMatch && !hashMatch && !noteMatch && !typeMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [transactions, txTypeFilter, txStatusFilter, txSearchQuery]);
+
+  const totalTxPages = Math.max(1, Math.ceil(filteredTransactions.length / txPerPage));
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (txCurrentPage - 1) * txPerPage;
+    return filteredTransactions.slice(startIndex, startIndex + txPerPage);
+  }, [filteredTransactions, txCurrentPage, txPerPage]);
+
+  const handleTxPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalTxPages) {
+      setTxCurrentPage(newPage);
+    }
+  };
+
+  // ==============================
+  // 2. REFERRALS LIST & PAGINATION
+  // ==============================
+  const [referralsList] = useState<ReferralRecord[]>(INITIAL_REFERRALS);
+  const [refSearchQuery, setRefSearchQuery] = useState('');
+  const [refCurrentPage, setRefCurrentPage] = useState(1);
+  const refPerPage = 4;
+
+  const filteredReferrals = useMemo(() => {
+    if (!refSearchQuery.trim()) return referralsList;
+    const query = refSearchQuery.trim().toLowerCase();
+    return referralsList.filter(
+      (ref) =>
+        ref.orderId.toLowerCase().includes(query) ||
+        ref.referredUserAddress.toLowerCase().includes(query) ||
+        (ref.referredUserName && ref.referredUserName.toLowerCase().includes(query))
+    );
+  }, [referralsList, refSearchQuery]);
+
+  const totalRefPages = Math.max(1, Math.ceil(filteredReferrals.length / refPerPage));
+  const paginatedReferrals = useMemo(() => {
+    const startIndex = (refCurrentPage - 1) * refPerPage;
+    return filteredReferrals.slice(startIndex, startIndex + refPerPage);
+  }, [filteredReferrals, refCurrentPage, refPerPage]);
+
+  const handleRefPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalRefPages) {
+      setRefCurrentPage(newPage);
+    }
+  };
+
+  // Total MIND earned from referrals
+  const totalRefMIND = user.referralEarningsMIND || referralsList.reduce((acc, curr) => acc + curr.bonusEarnedMIND, 0);
+
+  // ==============================
+  // 3. PROFILE FORM STATE
+  // ==============================
+  const [profileName, setProfileName] = useState(user.name || 'Arif Hossain');
+  const [profileEmail, setProfileEmail] = useState(user.email || 'helloedulife@gmail.com');
+  const [profileAddress, setProfileAddress] = useState(user.physicalAddress || 'Gulshan-2, Dhaka 1212, Bangladesh');
+  const [profilePhone, setProfilePhone] = useState(user.phone || '+880 1712-345678');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const handleProfileSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+
+    setTimeout(() => {
+      const updated: UserAccount = {
+        ...user,
+        name: profileName.trim(),
+        email: profileEmail.trim(),
+        physicalAddress: profileAddress.trim(),
+        phone: profilePhone.trim(),
+      };
+      onUpdateUser(updated);
+      setIsSavingProfile(false);
+      onShowToast('Profile Updated Successfully', 'Your account details have been saved.', 'success');
+    }, 600);
+  };
+
+  // Copy referral & address helpers
   const referralLink = `https://mindchain.info/ref?id=${user.address.toLowerCase()}`;
 
   const handleCopyReferral = () => {
     navigator.clipboard.writeText(referralLink);
     setCopiedRef(true);
-    onShowToast('Referral link copied!', referralLink, 'success');
+    onShowToast('Referral Link Copied', referralLink, 'success');
     setTimeout(() => setCopiedRef(false), 2000);
   };
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(user.address);
     setCopiedAddr(true);
-    onShowToast('Wallet address copied!', user.address, 'info');
+    onShowToast('Wallet Address Copied', user.address, 'info');
     setTimeout(() => setCopiedAddr(false), 2000);
+  };
+
+  const handleCopyTxHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopiedTxHash(true);
+    onShowToast('Tx Hash Copied', hash, 'info');
+    setTimeout(() => setCopiedTxHash(false), 2000);
   };
 
   // Withdraw action
@@ -90,20 +222,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
     onUpdateUser(updatedUser);
 
+    const generatedOrderId = `MND-WTH-${Math.floor(100000 + Math.random() * 900000)}`;
     const tx: Transaction = {
       id: `tx-${Date.now()}`,
+      orderId: generatedOrderId,
       type: 'withdraw',
       amountMIND: num,
       amountUSD: num * MIND_PRICE_USD,
       txHash: generateTxHash(),
-      timestamp: 'Processing',
+      timestamp: 'Just now',
       status: 'processing',
       note: `Withdrawal to ${truncateAddress(withdrawAddress)}`,
     };
     onAddTransaction(tx);
     setShowWithdrawModal(false);
     setWithdrawAmount('');
-    onShowToast('Withdrawal Initiated', `Dispatched ${formatNumber(num)} MIND to ${truncateAddress(withdrawAddress)}`, 'info');
+    onShowToast('Withdrawal Initiated', `Dispatched ${formatNumber(num)} MIND [${generatedOrderId}] to ${truncateAddress(withdrawAddress)}`, 'info');
   };
 
   return (
@@ -119,7 +253,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  Connected EVM Address
+                  {user.name ? `${user.name} • EVM Account` : 'Connected EVM Address'}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   Mainnet Alpha
@@ -131,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </span>
                 <button
                   onClick={handleCopyAddress}
-                  className="text-slate-400 hover:text-cyan-400 p-0.5 transition-colors"
+                  className="text-slate-400 hover:text-cyan-400 p-0.5 transition-colors cursor-pointer"
                   title="Copy full address"
                 >
                   {copiedAddr ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -165,6 +299,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('profile')}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+              title="Profile Settings"
+            >
+              <User className="w-4 h-4" />
+            </button>
+
+            <button
               onClick={onLogout}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
               title="Logout Session"
@@ -182,8 +328,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: Layers },
             { id: 'buy', label: 'Presale Terminal', icon: Zap },
-            { id: 'referrals', label: 'Referral Rewards (+15%)', icon: Users },
-            { id: 'history', label: 'Transaction Activity', icon: Clock },
+            { id: 'referrals', label: 'Referral Rewards (+15% MIND)', icon: Users },
+            { id: 'history', label: `Transaction History (${transactions.length})`, icon: Clock },
+            { id: 'profile', label: 'Profile Settings', icon: User },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -249,38 +396,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          {/* Card 3: Referral Earnings */}
+          {/* Card 3: Referral Earnings (in MIND Coins) */}
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
             <div className="flex justify-between items-start mb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Referral Commission
+                Referral Bonus Earned
               </span>
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
                 <Users className="w-4 h-4" />
               </div>
             </div>
             <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {user.referralsCount} <span className="text-amber-400 text-sm">Users</span>
+              {formatNumber(totalRefMIND)} <span className="text-amber-400 text-sm">MIND</span>
             </p>
-            <p className="text-xs text-amber-400 font-mono mt-1 font-bold">
-              +{formatUSD(user.referralEarningsUSD)} Earned (15%)
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-amber-400 font-mono font-bold">
+                ≈ {formatUSD(totalRefMIND * MIND_PRICE_USD)} USD ({user.referralsCount} Invites)
+              </p>
+              <button
+                onClick={() => setActiveTab('referrals')}
+                className="text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer underline"
+              >
+                View List <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* 2. REFERRAL PROGRAM QUICK BANNER */}
-        <div className="bg-gradient-to-r from-cyan-900/40 via-slate-900 to-emerald-950/40 border border-cyan-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
+        <div className="bg-gradient-to-r from-cyan-900/40 via-slate-900 to-amber-950/30 border border-cyan-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
           <div className="space-y-1 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-cyan-400/10 text-cyan-300 border border-cyan-400/30 text-[10px] font-extrabold uppercase tracking-wider font-mono">
-                +15% Instant USDT Commission
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30 text-[10px] font-extrabold uppercase tracking-wider font-mono flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                +15% Instant MIND Coin Bonus
               </span>
             </div>
             <h3 className="text-lg font-extrabold text-white">
-              Share Your MindChain Referral Link
+              Share Your Affiliate Link & Earn Free MIND Coins
             </h3>
             <p className="text-xs text-slate-300 max-w-xl">
-              Earn an immediate 15% bonus in USDT for every contributor who buys MIND Coin using your EVM affiliate link.
+              Earn an immediate 15% bonus in MIND Coins for every contributor who buys MIND using your referral link.
             </p>
           </div>
 
@@ -299,6 +455,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* 3. DYNAMIC TAB CONTENT */}
+
+        {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left: Presale Buy Terminal Widget */}
@@ -306,7 +464,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
             </div>
 
-            {/* Right: Recent Activity Table */}
+            {/* Right: Recent Activity Table with Order ID */}
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 flex flex-col h-full">
                 <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-800">
@@ -316,9 +474,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       Recent Activity
                     </h3>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    {transactions.length} Records
-                  </span>
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    View All ({transactions.length}) <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
 
                 <div className="divide-y divide-slate-800/80 overflow-y-auto max-h-[500px]">
@@ -327,7 +488,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       No activity recorded yet.
                     </div>
                   ) : (
-                    transactions.map((tx) => (
+                    transactions.slice(0, 5).map((tx) => (
                       <div
                         key={tx.id}
                         onClick={() => setSelectedTx(tx)}
@@ -337,19 +498,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-cyan-400 shrink-0">
                             {tx.type === 'buy' && <Zap className="w-4 h-4 text-cyan-400" />}
                             {tx.type === 'referral' && <Users className="w-4 h-4 text-amber-400" />}
-                            {tx.type === 'staking_reward' && <Coins className="w-4 h-4 text-emerald-400" />}
                             {tx.type === 'withdraw' && <ArrowUpRight className="w-4 h-4 text-rose-400" />}
                           </div>
 
                           <div>
-                            <p className="text-xs font-bold text-white capitalize flex items-center gap-1.5">
-                              {tx.type.replace('_', ' ')}
-                              <span className="text-[10px] text-slate-500 font-mono font-normal">
-                                • {tx.timestamp}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white capitalize">
+                                {tx.type.replace('_', ' ')}
                               </span>
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-mono truncate max-w-[160px]">
-                              {truncateAddress(tx.txHash, 6, 4)}
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                {tx.orderId || 'ORD-N/A'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              {tx.timestamp} • {truncateAddress(tx.txHash, 6, 4)}
                             </p>
                           </div>
                         </div>
@@ -371,44 +533,59 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* 4. BUY TERMINAL TAB */}
+        {/* TAB 2: BUY TERMINAL */}
         {activeTab === 'buy' && (
           <div className="max-w-2xl mx-auto">
             <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
           </div>
         )}
 
-        {/* 5. REFERRALS TAB */}
+        {/* TAB 3: REFERRALS WITH MIND BONUS & PAGINATED LIST */}
         {activeTab === 'referrals' && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-5xl mx-auto space-y-6">
+            {/* Top Stats Overview */}
             <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-amber-400" />
-                <h3 className="text-lg font-bold text-white">MindChain Affiliate Program</h3>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-6 h-6 text-amber-400" />
+                  <div>
+                    <h3 className="text-lg font-bold text-white">MindChain Affiliate & Referral System</h3>
+                    <p className="text-xs text-slate-400">
+                      Earn 15% instant commission rewarded directly in MIND Coins for every contributor.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-xs font-mono font-bold">
+                  Reward Currency: MIND Coin
+                </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Invite fellow Web3 investors, friends, and community members to join the MindChain Layer-1 presale. Every time a buyer uses your link, you instantly receive a 15% commission paid out in BEP20 USDT or MIND.
-              </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800">
                   <p className="text-[10px] uppercase font-bold text-slate-400">Total Referrals</p>
-                  <p className="text-2xl font-black text-white font-mono mt-1">{user.referralsCount}</p>
+                  <p className="text-2xl font-black text-white font-mono mt-1">{user.referralsCount} Users</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Active Investors</p>
                 </div>
+
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Earned Bonus</p>
-                  <p className="text-2xl font-black text-emerald-400 font-mono mt-1">
-                    {formatUSD(user.referralEarningsUSD)}
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Bonus Earned</p>
+                  <p className="text-2xl font-black text-amber-400 font-mono mt-1">
+                    +{formatNumber(totalRefMIND)} <span className="text-sm">MIND</span>
+                  </p>
+                  <p className="text-[11px] text-emerald-400 font-mono mt-0.5">
+                    ≈ {formatUSD(totalRefMIND * MIND_PRICE_USD)} USD Value
                   </p>
                 </div>
+
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800">
                   <p className="text-[10px] uppercase font-bold text-slate-400">Commission Rate</p>
                   <p className="text-2xl font-black text-cyan-400 font-mono mt-1">15.00%</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Instant Calculation in MIND</p>
                 </div>
               </div>
 
-              {/* Referral link box */}
-              <div className="pt-4">
+              {/* Referral link copy box */}
+              <div className="pt-2">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                   Your Unique Referral Link
                 </label>
@@ -429,44 +606,472 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Paginated Referral Records Table */}
+            <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-cyan-400" />
+                    Referred Investors List ({filteredReferrals.length})
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Detailed list of all contributors registered under your referral code with bonus in MIND.
+                  </p>
+                </div>
+
+                {/* Search in Referral List */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={refSearchQuery}
+                    onChange={(e) => {
+                      setRefSearchQuery(e.target.value);
+                      setRefCurrentPage(1);
+                    }}
+                    placeholder="Search Order ID, Name..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800 bg-slate-900/50">
+                    <tr>
+                      <th className="py-2.5 px-3">Order / Ref ID</th>
+                      <th className="py-2.5 px-3">Referred Investor</th>
+                      <th className="py-2.5 px-3">Joined Date</th>
+                      <th className="py-2.5 px-3">Deposit Amount</th>
+                      <th className="py-2.5 px-3 text-amber-400">Bonus in MIND (+15%)</th>
+                      <th className="py-2.5 px-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {paginatedReferrals.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
+                          No referral records found matching your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedReferrals.map((ref) => (
+                        <tr key={ref.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 font-bold text-[11px]">
+                              {ref.orderId}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <p className="text-white font-bold">{ref.referredUserName || 'Anonymous Web3 User'}</p>
+                            <p className="text-[10px] text-slate-400">{truncateAddress(ref.referredUserAddress, 8, 6)}</p>
+                          </td>
+                          <td className="py-3 px-3 text-slate-300">{ref.joinedDate}</td>
+                          <td className="py-3 px-3 text-white font-bold">{formatUSD(ref.depositUSD)}</td>
+                          <td className="py-3 px-3 font-bold text-amber-400">
+                            +{formatNumber(ref.bonusEarnedMIND)} MIND
+                            <span className="block text-[10px] text-emerald-400 font-normal">
+                              ≈ {formatUSD(ref.bonusEarnedMIND * MIND_PRICE_USD)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className="px-2 py-0.5 rounded text-[10px] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                              {ref.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Referral Pagination Controls */}
+              {totalRefPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs font-mono">
+                  <span className="text-slate-400">
+                    Showing {(refCurrentPage - 1) * refPerPage + 1} to{' '}
+                    {Math.min(refCurrentPage * refPerPage, filteredReferrals.length)} of {filteredReferrals.length} referrals
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleRefPageChange(refCurrentPage - 1)}
+                      disabled={refCurrentPage === 1}
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                    </button>
+
+                    {Array.from({ length: totalRefPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => handleRefPageChange(pageNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                          refCurrentPage === pageNum
+                            ? 'bg-cyan-500 text-slate-950'
+                            : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => handleRefPageChange(refCurrentPage + 1)}
+                      disabled={refCurrentPage === totalRefPages}
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                    >
+                      Next <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* 6. FULL TRANSACTION HISTORY TAB */}
+        {/* TAB 4: COMPLETE TRANSACTION HISTORY WITH FILTERS, ORDER ID & PAGINATION */}
         {activeTab === 'history' && (
-          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-base font-bold text-white mb-4">Complete Transaction Records</h3>
+          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-6">
+            {/* Header & Filter Controls Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-cyan-400" />
+                  Transaction History & Order Records
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Search, filter, and review all your presale purchases, referral rewards, and withdrawals.
+                </p>
+              </div>
+
+              {/* Filters Container */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Search by Order ID / Hash */}
+                <div className="relative w-full sm:w-56">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={txSearchQuery}
+                    onChange={(e) => {
+                      setTxSearchQuery(e.target.value);
+                      setTxCurrentPage(1);
+                    }}
+                    placeholder="Search Order ID, Hash..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                {/* Filter by Type */}
+                <div className="flex items-center gap-1 bg-slate-950 border border-slate-700 rounded-xl p-1 text-xs">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'buy', label: 'Buy' },
+                    { id: 'referral', label: 'Referral' },
+                    { id: 'withdraw', label: 'Withdraw' },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => {
+                        setTxTypeFilter(filter.id as any);
+                        setTxCurrentPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer text-xs ${
+                        txTypeFilter === filter.id
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Filter by Status */}
+                <select
+                  value={txStatusFilter}
+                  onChange={(e) => {
+                    setTxStatusFilter(e.target.value);
+                    setTxCurrentPage(1);
+                  }}
+                  className="bg-slate-950 border border-slate-700 text-xs font-mono text-slate-300 rounded-xl px-3 py-2 outline-none cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="processing">Processing</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Transactions Table with Order ID */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800">
+                <thead className="text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800 bg-slate-900/50">
                   <tr>
-                    <th className="pb-3 px-3">Type</th>
-                    <th className="pb-3 px-3">MIND Amount</th>
-                    <th className="pb-3 px-3">USD Value</th>
-                    <th className="pb-3 px-3">Transaction Hash</th>
-                    <th className="pb-3 px-3">Date</th>
-                    <th className="pb-3 px-3 text-right">Status</th>
+                    <th className="py-3 px-3">Order ID</th>
+                    <th className="py-3 px-3">Type</th>
+                    <th className="py-3 px-3">MIND Amount</th>
+                    <th className="py-3 px-3">USD Value</th>
+                    <th className="py-3 px-3">Transaction Hash</th>
+                    <th className="py-3 px-3">Date</th>
+                    <th className="py-3 px-3 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-3 font-bold text-white capitalize">{tx.type.replace('_', ' ')}</td>
-                      <td className="py-3 px-3 text-cyan-400 font-bold">{formatNumber(tx.amountMIND)} MIND</td>
-                      <td className="py-3 px-3 text-slate-300">{formatUSD(tx.amountUSD)}</td>
-                      <td className="py-3 px-3 text-slate-400 truncate max-w-[150px]">
-                        {truncateAddress(tx.txHash, 8, 6)}
-                      </td>
-                      <td className="py-3 px-3 text-slate-400">{tx.timestamp}</td>
-                      <td className="py-3 px-3 text-right">
-                        <span className="px-2 py-0.5 rounded text-[10px] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          {tx.status}
-                        </span>
+                  {paginatedTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-500 font-mono">
+                        No transactions found matching your selected filters.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedTransactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        onClick={() => setSelectedTx(tx)}
+                        className="hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                      >
+                        <td className="py-3.5 px-3">
+                          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-cyan-300 font-bold group-hover:border-cyan-500/50 transition-colors">
+                            {tx.orderId || 'MND-ORD-N/A'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 font-bold text-white capitalize">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                              tx.type === 'buy'
+                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                                : tx.type === 'referral'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}
+                          >
+                            {tx.type.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className={`py-3.5 px-3 font-bold ${tx.type === 'withdraw' ? 'text-rose-400' : 'text-cyan-400'}`}>
+                          {tx.type === 'withdraw' ? '-' : '+'}{formatNumber(tx.amountMIND)} MIND
+                        </td>
+                        <td className="py-3.5 px-3 text-slate-300">{formatUSD(tx.amountUSD)}</td>
+                        <td className="py-3.5 px-3 text-slate-400 truncate max-w-[140px]">
+                          {truncateAddress(tx.txHash, 8, 6)}
+                        </td>
+                        <td className="py-3.5 px-3 text-slate-400">{tx.timestamp}</td>
+                        <td className="py-3.5 px-3 text-right">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
+                              tx.status === 'completed'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}
+                          >
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalTxPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs font-mono">
+                <span className="text-slate-400">
+                  Showing {(txCurrentPage - 1) * txPerPage + 1} to{' '}
+                  {Math.min(txCurrentPage * txPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleTxPageChange(txCurrentPage - 1)}
+                    disabled={txCurrentPage === 1}
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                  </button>
+
+                  {Array.from({ length: totalTxPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => handleTxPageChange(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        txCurrentPage === pageNum
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => handleTxPageChange(txCurrentPage + 1)}
+                    disabled={txCurrentPage === totalTxPages}
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 5: PROFILE UPDATE SETTINGS (ইমেইল, নাম, ঠিকানা আপডেট; ওয়ালেট লকড) */}
+        {activeTab === 'profile' && (
+          <div className="max-w-3xl mx-auto space-y-6">
+            <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <User className="w-5 h-5 text-cyan-400" />
+                    Profile & Account Information
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Update your profile details, contact information, and delivery address.
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
+                  {profileName.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </div>
+
+              {/* Wallet Lock Notification */}
+              <div className="p-4 bg-slate-900/90 border border-cyan-500/30 rounded-xl flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <p className="font-bold text-white flex items-center gap-1.5">
+                    Immutable EVM Wallet Address
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">
+                      Locked / Read-Only
+                    </span>
+                  </p>
+                  <p className="text-slate-300 leading-relaxed">
+                    যে ওয়ালেটটি দিয়ে একাউন্ট তৈরি করা হয়েছে তা নিরাপত্তা ও অন-চেইন ভেরিফিকেশনের স্বার্থে পরিবর্তনযোগ্য নয়। আপনি নাম, ইমেইল ও ঠিকানা যেকোনো সময় আপডেট করতে পারবেন।
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleProfileSave} className="space-y-5">
+                {/* 1. Wallet Address (Locked / Disabled) */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      Registered EVM Wallet Address (অপরিবর্তনীয়)
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-mono">Cannot be changed</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={user.address}
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl py-3 pl-3 pr-20 text-xs font-mono text-slate-400 cursor-not-allowed select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyAddress}
+                      className="absolute right-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold rounded-lg border border-slate-700 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedAddr ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Full Name */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-cyan-400" />
+                    Full Name (আপনার নাম)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors"
+                  />
+                </div>
+
+                {/* 3. Email Address */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                    Email Address (ইমেইল এড্রেস)
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={profileEmail}
+                    onChange={(e) => setProfileEmail(e.target.value)}
+                    placeholder="yourname@example.com"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
+                  />
+                </div>
+
+                {/* 4. Physical Address */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                    Physical / Mailing Address (আপনার ঠিকানা)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={profileAddress}
+                    onChange={(e) => setProfileAddress(e.target.value)}
+                    placeholder="House, Road, City, Country"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors resize-none"
+                  />
+                </div>
+
+                {/* 5. Phone Number */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                    Contact / Telegram Phone (যোগাযোগ নম্বর - ঐচ্ছিক)
+                  </label>
+                  <input
+                    type="text"
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value)}
+                    placeholder="+880 1712-345678"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
+                  />
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 font-black rounded-xl uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                        Saving Changes...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-slate-950" />
+                        Save Profile Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -567,14 +1172,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* TRANSACTION DETAILS MODAL */}
+      {/* TRANSACTION DETAILS MODAL WITH ORDER ID & TX HASH */}
       {selectedTx && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-[#1e293b] border border-slate-700 max-w-md w-full rounded-2xl p-6 shadow-2xl text-white space-y-4 relative">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white capitalize">
-                {selectedTx.type.replace('_', ' ')} Details
-              </h3>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-white capitalize flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-cyan-400" />
+                  Transaction & Order Details
+                </h3>
+                <span className="text-xs font-mono text-cyan-400 font-bold">
+                  {selectedTx.orderId || 'MND-ORD-N/A'}
+                </span>
+              </div>
               <button
                 onClick={() => setSelectedTx(null)}
                 className="text-slate-400 hover:text-white p-1 cursor-pointer"
@@ -584,30 +1195,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="space-y-3 text-xs font-mono">
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Amount:</span>
+              <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Order ID:</span>
+                  <span className="text-cyan-300 font-bold">{selectedTx.orderId || 'MND-ORD-N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Transaction Type:</span>
+                  <span className="text-white capitalize font-bold">{selectedTx.type.replace('_', ' ')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Amount (MIND):</span>
                   <span className="text-cyan-400 font-bold">{formatNumber(selectedTx.amountMIND)} MIND</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-400">USD Value:</span>
                   <span className="text-white">{formatUSD(selectedTx.amountUSD)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-400">Timestamp:</span>
                   <span className="text-slate-300">{selectedTx.timestamp}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-400">Status:</span>
                   <span className="text-emerald-400 font-bold uppercase">{selectedTx.status}</span>
                 </div>
+                {selectedTx.note && (
+                  <div className="pt-2 border-t border-slate-900 text-slate-400 text-[11px]">
+                    <span className="text-slate-500">Note:</span> {selectedTx.note}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  On-Chain Transaction Hash
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
+                  <span>On-Chain Transaction Hash</span>
+                  <button
+                    onClick={() => handleCopyTxHash(selectedTx.txHash)}
+                    className="text-cyan-400 hover:text-cyan-300 cursor-pointer flex items-center gap-1"
+                  >
+                    {copiedTxHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    Copy
+                  </button>
                 </label>
-                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-cyan-300 break-all select-all">
+                <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-cyan-300 break-all select-all font-mono">
                   {selectedTx.txHash}
                 </div>
               </div>
@@ -625,4 +1256,3 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
-
