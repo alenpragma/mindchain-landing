@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserAccount, Transaction, PaymentInvoice } from './types';
+import { UserAccount, Transaction, PaymentInvoice, AppliedCoupon } from './types';
 import { INITIAL_TRANSACTIONS, INITIAL_USER } from './utils/crypto';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -36,9 +36,11 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-  const [selectedBuyAmount, setSelectedBuyAmount] = useState<number>(500);
+  const [selectedBuyAmount, setSelectedBuyAmount] = useState<number>(100);
+  const [selectedCoupon, setSelectedCoupon] = useState<AppliedCoupon | null>(null);
 
   const [pendingBuyAmount, setPendingBuyAmount] = useState<number | null>(null);
+  const [pendingCoupon, setPendingCoupon] = useState<AppliedCoupon | null>(null);
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -88,8 +90,10 @@ export default function App() {
     // If user initiated a buy before logging in, proceed to invoice modal
     if (pendingBuyAmount) {
       setSelectedBuyAmount(pendingBuyAmount);
+      setSelectedCoupon(pendingCoupon);
       setIsInvoiceOpen(true);
       setPendingBuyAmount(null);
+      setPendingCoupon(null);
     } else {
       setCurrentView('dashboard');
     }
@@ -101,12 +105,14 @@ export default function App() {
     addToast('Disconnected', 'Your EVM session has been cleared.', 'info');
   };
 
-  const handleOpenBuyFlow = (amount?: number) => {
-    const finalAmount = amount || 500;
+  const handleOpenBuyFlow = (amount?: number, coupon?: AppliedCoupon | null) => {
+    const finalAmount = amount || 100;
+    const finalCoupon = coupon || null;
     
     // Strict Gate: Must sign up or log in first before accessing payment invoice
     if (!user) {
       setPendingBuyAmount(finalAmount);
+      setPendingCoupon(finalCoupon);
       setAuthMode('signup');
       setIsAuthOpen(true);
       addToast(
@@ -118,6 +124,7 @@ export default function App() {
     }
 
     setSelectedBuyAmount(finalAmount);
+    setSelectedCoupon(finalCoupon);
     setIsInvoiceOpen(true);
   };
 
@@ -168,7 +175,7 @@ export default function App() {
         currentView={currentView}
         onNavigate={(view) => setCurrentView(view)}
         onOpenAuth={handleOpenAuth}
-        onOpenBuy={() => handleOpenBuyFlow(500)}
+        onOpenBuy={() => handleOpenBuyFlow(100)}
         onLogout={handleLogout}
         onCopyAddress={(addr) => addToast('Address Copied', addr, 'info')}
       />
@@ -179,14 +186,14 @@ export default function App() {
           {/* Hero Section with Bonus Calculator */}
           <Hero
             isLoggedIn={!!user}
-            onBuyClick={(amount) => handleOpenBuyFlow(amount)}
+            onBuyClick={(amount, coupon) => handleOpenBuyFlow(amount, coupon)}
             onExploreClick={() => {
               document.getElementById('ecosystem')?.scrollIntoView({ behavior: 'smooth' });
             }}
           />
 
           {/* Ecosystem Grid (CEX, DEX, DeFi, Wallet, Explorer, Academy) */}
-          <EcosystemGrid onSelectAction={() => handleOpenBuyFlow(500)} />
+          <EcosystemGrid onSelectAction={() => handleOpenBuyFlow(100)} />
 
           {/* Comparison Matrix & Tokenomics */}
           <TrustAndSpecs />
@@ -195,7 +202,7 @@ export default function App() {
         <Dashboard
           user={user}
           transactions={transactions}
-          onOpenBuy={(amount) => handleOpenBuyFlow(amount)}
+          onOpenBuy={(amount, coupon) => handleOpenBuyFlow(amount, coupon)}
           onLogout={handleLogout}
           onUpdateUser={(updated) => setUser(updated)}
           onAddTransaction={handleAddTransaction}
@@ -229,6 +236,7 @@ export default function App() {
       <InvoiceModal
         isOpen={isInvoiceOpen}
         usdAmount={selectedBuyAmount}
+        coupon={selectedCoupon}
         onClose={() => setIsInvoiceOpen(false)}
         onPaymentSuccess={handlePaymentSuccess}
       />

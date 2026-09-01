@@ -13,8 +13,10 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 
+import { AppliedCoupon } from '../types';
+
 interface HeroProps {
-  onBuyClick: (usdAmount?: number) => void;
+  onBuyClick: (usdAmount?: number, coupon?: AppliedCoupon | null) => void;
   onExploreClick: () => void;
   isLoggedIn?: boolean;
 }
@@ -104,7 +106,10 @@ export const Hero: React.FC<HeroProps> = ({ onBuyClick, onExploreClick, isLogged
 
           {/* Right Column: Presale Calculator Widget */}
           <div className="lg:col-span-5">
-            <PresaleCalculator isLoggedIn={isLoggedIn} onProceedToPay={(amount) => onBuyClick(amount)} />
+            <PresaleCalculator
+              isLoggedIn={isLoggedIn}
+              onProceedToPay={(amount, coupon) => onBuyClick(amount, coupon)}
+            />
           </div>
         </div>
 

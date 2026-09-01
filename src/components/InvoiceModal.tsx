@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeDisplay } from './QRCodeDisplay';
-import { PaymentInvoice, Transaction } from '../types';
+import { PaymentInvoice, Transaction, AppliedCoupon } from '../types';
 import {
   DEFAULT_DEPOSIT_ADDRESS,
   MIND_PRICE_USD,
@@ -8,7 +8,6 @@ import {
   formatNumber,
   formatUSD,
   generateTxHash,
-  truncateAddress,
 } from '../utils/crypto';
 import {
   Copy,
@@ -16,18 +15,18 @@ import {
   Clock,
   CheckCircle2,
   Loader2,
-  AlertTriangle,
-  ExternalLink,
   ShieldCheck,
   Zap,
   X,
   ArrowRight,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 
 interface InvoiceModalProps {
   isOpen: boolean;
   usdAmount: number;
+  coupon?: AppliedCoupon | null;
   onClose: () => void;
   onPaymentSuccess: (invoice: PaymentInvoice, tx: Transaction) => void;
 }
@@ -35,6 +34,7 @@ interface InvoiceModalProps {
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   isOpen,
   usdAmount,
+  coupon = null,
   onClose,
   onPaymentSuccess,
 }) => {
@@ -53,9 +53,21 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   useEffect(() => {
     if (isOpen && usdAmount > 0) {
       const calc = calculateMindAmount(usdAmount);
+      const originalUsd = usdAmount;
+      let finalPayable = usdAmount;
+      let activeCoupon = coupon ? { ...coupon } : null;
+
+      if (activeCoupon) {
+        const discountVal = Number(((usdAmount * activeCoupon.discountPercent) / 100).toFixed(2));
+        finalPayable = Math.max(0, Number((usdAmount - discountVal).toFixed(2)));
+        activeCoupon.discountAmountUSD = discountVal;
+      }
+
       const generatedInvoice: PaymentInvoice = {
         invoiceId: `INV-${Math.floor(100000 + Math.random() * 900000)}`,
-        usdAmount,
+        usdAmount: finalPayable,
+        originalUsdAmount: originalUsd,
+        coupon: activeCoupon,
         mindAmount: calc.baseMind,
         bonusPercent: calc.bonusPercent,
         bonusMind: calc.bonusMind,
@@ -77,7 +89,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       setRedirectCountdown(3);
       setSimulatedTxHash(generateTxHash());
     }
-  }, [isOpen, usdAmount]);
+  }, [isOpen, usdAmount, coupon]);
 
   // Invoice expiration timer
   useEffect(() => {
@@ -106,6 +118,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       setConfirmations(3);
       setStep('confirmed');
 
+      const couponNote = invoice.coupon
+        ? ` • Coupon: ${invoice.coupon.code} -${invoice.coupon.discountPercent}%`
+        : '';
+
       const completedTx: Transaction = {
         id: `tx-${Date.now()}`,
         type: 'buy',
@@ -114,7 +130,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         txHash: simulatedTxHash || generateTxHash(),
         timestamp: 'Just now',
         status: 'completed',
-        note: `Platform Bonus Buy (${invoice.usdAmount} USDT BEP-20)`,
+        note: `Platform Bonus Buy (${invoice.usdAmount} USDT BEP-20${couponNote})`,
       };
 
       // Redirect countdown
@@ -133,6 +149,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   const handleManualImmediateRedirect = () => {
     if (!invoice) return;
+    const couponNote = invoice.coupon
+      ? ` • Coupon: ${invoice.coupon.code} -${invoice.coupon.discountPercent}%`
+      : '';
+
     const completedTx: Transaction = {
       id: `tx-${Date.now()}`,
       type: 'buy',
@@ -141,7 +161,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       txHash: simulatedTxHash || generateTxHash(),
       timestamp: 'Just now',
       status: 'completed',
-      note: `Platform Bonus Buy (${invoice.usdAmount} USDT BEP-20)`,
+      note: `Platform Bonus Buy (${invoice.usdAmount} USDT BEP-20${couponNote})`,
     };
     onPaymentSuccess(invoice, completedTx);
     onClose();
@@ -172,7 +192,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         {/* Close Button (disabled while confirming) */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors z-10"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors z-10 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -181,13 +201,19 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           {/* Header & Status Indicator */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-mono font-bold text-cyan-400">
                   {invoice.invoiceId}
                 </span>
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                   BEP20 USDT
                 </span>
+                {invoice.coupon && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                    <Tag className="w-3 h-3" />
+                    {invoice.coupon.code} (-{invoice.coupon.discountPercent}%)
+                  </span>
+                )}
               </div>
               <h3 className="text-xl font-black text-white mt-0.5">
                 Automated Payment Invoice
@@ -215,7 +241,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                     </p>
                     <p className="text-[11px] text-slate-400">
                       Send exactly{' '}
-                      <strong className="text-emerald-400">
+                      <strong className="text-emerald-400 text-xs">
                         {formatUSD(invoice.usdAmount)} USDT
                       </strong>{' '}
                       to the address below
@@ -281,7 +307,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 </div>
                 <button
                   onClick={handleManualImmediateRedirect}
-                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-lg transition-colors flex items-center gap-1"
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   View Dashboard ({redirectCountdown}s)
                 </button>
@@ -313,7 +339,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   <button
                     type="button"
                     onClick={handleCopyAddress}
-                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors shrink-0"
+                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors shrink-0 cursor-pointer"
                     title="Copy address"
                   >
                     {copied ? (
@@ -328,17 +354,37 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               {/* Breakdown Grid */}
               <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800 space-y-2 text-xs font-mono">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Exact Deposit Amount:</span>
-                  <span className="text-white font-bold">{formatUSD(invoice.usdAmount)} USDT</span>
+                  <span className="text-slate-400">Buy Value (USD):</span>
+                  <span className="text-white font-bold">{formatUSD(invoice.originalUsdAmount)}</span>
                 </div>
+
+                {invoice.coupon && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span className="flex items-center gap-1">
+                      <Tag className="w-3 h-3" />
+                      Coupon ({invoice.coupon.code}):
+                    </span>
+                    <span className="font-bold">
+                      -{formatUSD(invoice.coupon.discountAmountUSD)} (-{invoice.coupon.discountPercent}%)
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-1 border-t border-slate-800/80">
+                  <span className="text-slate-200 font-bold">Exact Deposit Amount:</span>
+                  <span className="text-emerald-400 font-extrabold">{formatUSD(invoice.usdAmount)} USDT</span>
+                </div>
+
                 <div className="flex justify-between">
                   <span className="text-slate-400">Accepted Network:</span>
                   <span className="text-emerald-400 font-bold">BNB Smart Chain (BEP-20)</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span className="text-slate-400">Fixed Rate:</span>
                   <span className="text-cyan-400">1 MIND = ${MIND_PRICE_USD}</span>
                 </div>
+
                 <div className="flex justify-between pt-2 border-t border-slate-800">
                   <span className="text-slate-200 font-bold">Total MIND Credited:</span>
                   <span className="text-cyan-300 font-black text-sm">
@@ -359,7 +405,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 hover:from-emerald-400 hover:to-cyan-300 text-slate-950 font-black rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Zap className="w-4 h-4 fill-slate-950" />
-                  Simulate Instant BEP20 Payment Deposit
+                  Simulate Instant BEP20 Payment Deposit ({formatUSD(invoice.usdAmount)} USDT)
                 </button>
                 <p className="text-[10px] text-slate-400 text-center font-mono">
                   Clicking simulates real-time blockchain node deposit & 3-block confirmation
@@ -371,7 +417,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               <button
                 type="button"
                 onClick={handleManualImmediateRedirect}
-                className="w-full py-3.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black rounded-xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black rounded-xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 Go to User Dashboard Now <ArrowRight className="w-4 h-4" />
               </button>

@@ -1,8 +1,59 @@
-import { Transaction, UserAccount } from '../types';
+import { Transaction, UserAccount, AppliedCoupon } from '../types';
 
 export const MIND_PRICE_USD = 0.41;
 export const DEFAULT_DEPOSIT_ADDRESS = '0x8f3c7A91b61E2eB254FeB2dF31086C98A2cE748B';
 export const DEMO_USER_ADDRESS = '0x71C4B82390a42617C6418E66271c6f140689Af3d';
+
+export interface CouponConfig {
+  code: string;
+  discountPercent: number;
+  description: string;
+}
+
+export const ACTIVE_COUPONS: Record<string, CouponConfig> = {
+  MIND3: {
+    code: 'MIND3',
+    discountPercent: 3,
+    description: '3% Special Community Discount',
+  },
+  SAVE3: {
+    code: 'SAVE3',
+    discountPercent: 3,
+    description: '3% Instant Presale Discount',
+  },
+  WELCOME3: {
+    code: 'WELCOME3',
+    discountPercent: 3,
+    description: '3% Early Adopter Welcome Discount',
+  },
+  CRYPTO3: {
+    code: 'CRYPTO3',
+    discountPercent: 3,
+    description: '3% Web3 Community Discount',
+  },
+  MIND5: {
+    code: 'MIND5',
+    discountPercent: 5,
+    description: '5% VIP Exclusive Discount',
+  },
+};
+
+export function validateCoupon(code: string, buyUsdAmount: number): AppliedCoupon | null {
+  if (!code || typeof code !== 'string') return null;
+  const normalized = code.trim().toUpperCase();
+  const found = ACTIVE_COUPONS[normalized];
+  if (!found) return null;
+
+  const safeUsd = Math.max(0, buyUsdAmount);
+  const discountAmountUSD = Number(((safeUsd * found.discountPercent) / 100).toFixed(2));
+
+  return {
+    code: found.code,
+    discountPercent: found.discountPercent,
+    discountAmountUSD,
+    description: found.description,
+  };
+}
 
 export function truncateAddress(address: string, startLen = 6, endLen = 4): string {
   if (!address || address.length <= startLen + endLen) return address || '';

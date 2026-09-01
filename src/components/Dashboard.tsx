@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserAccount, Transaction } from '../types';
+import { UserAccount, Transaction, AppliedCoupon } from '../types';
 import {
   MIND_PRICE_USD,
   formatNumber,
@@ -15,26 +15,17 @@ import {
   Copy,
   Check,
   Zap,
-  ArrowDownLeft,
   ArrowUpRight,
-  ShieldCheck,
-  Sparkles,
-  ExternalLink,
   Layers,
   Coins,
-  Percent,
   Clock,
-  RefreshCw,
   LogOut,
-  ChevronRight,
-  AlertCircle,
-  Lock,
 } from 'lucide-react';
 
 interface DashboardProps {
   user: UserAccount;
   transactions: Transaction[];
-  onOpenBuy: (amount?: number) => void;
+  onOpenBuy: (amount?: number, coupon?: AppliedCoupon | null) => void;
   onLogout: () => void;
   onUpdateUser: (updatedUser: UserAccount) => void;
   onAddTransaction: (tx: Transaction) => void;
@@ -50,15 +41,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddTransaction,
   onShowToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'staking' | 'referrals' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'referrals' | 'history'>('overview');
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-
-  // Staking simulator state
-  const [stakeAmount, setStakeAmount] = useState<string>('1000');
-  const [stakedBalance, setStakedBalance] = useState<number>(0);
-  const [stakingDays, setStakingDays] = useState<number>(90);
 
   // Withdraw modal state
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -80,37 +66,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setCopiedAddr(true);
     onShowToast('Wallet address copied!', user.address, 'info');
     setTimeout(() => setCopiedAddr(false), 2000);
-  };
-
-  // Staking action
-  const handleStakeMIND = (e: React.FormEvent) => {
-    e.preventDefault();
-    const num = parseFloat(stakeAmount) || 0;
-    if (num <= 0) return;
-    if (num > user.balanceMIND) {
-      onShowToast('Insufficient Balance', 'You cannot stake more MIND than your current balance.', 'error');
-      return;
-    }
-
-    const updatedUser: UserAccount = {
-      ...user,
-      balanceMIND: user.balanceMIND - num,
-    };
-    setStakedBalance((prev) => prev + num);
-    onUpdateUser(updatedUser);
-
-    const tx: Transaction = {
-      id: `tx-${Date.now()}`,
-      type: 'staking_reward',
-      amountMIND: num,
-      amountUSD: num * MIND_PRICE_USD,
-      txHash: generateTxHash(),
-      timestamp: 'Just now',
-      status: 'completed',
-      note: `Deposited into MindStake Vault (${stakingDays} Days Lock)`,
-    };
-    onAddTransaction(tx);
-    onShowToast('Staking Successful', `Staked ${formatNumber(num)} MIND in 28% APY Vault`, 'success');
   };
 
   // Withdraw action
@@ -151,13 +106,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onShowToast('Withdrawal Initiated', `Dispatched ${formatNumber(num)} MIND to ${truncateAddress(withdrawAddress)}`, 'info');
   };
 
-  const calculateAPYReward = () => {
-    const num = parseFloat(stakeAmount) || 0;
-    const apy = 0.28; // 28% APY
-    const reward = num * apy * (stakingDays / 365);
-    return reward;
-  };
-
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200">
       {/* Sub-Header / Top Bar */}
@@ -192,7 +140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Quick Metrics & Price */}
+          {/* Quick Metrics & Actions */}
           <div className="flex items-center gap-3">
             <div className="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
@@ -201,16 +149,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <button
-              onClick={() => onOpenBuy(500)}
+              onClick={() => setShowWithdrawModal(true)}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/40 text-emerald-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              Withdraw
+            </button>
+
+            <button
+              onClick={() => onOpenBuy(100)}
               className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
             >
               <Zap className="w-3.5 h-3.5" />
-              Buy More MIND
+              Buy MIND
             </button>
 
             <button
               onClick={onLogout}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors cursor-pointer"
               title="Logout Session"
             >
               <LogOut className="w-4 h-4" />
@@ -226,7 +182,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: Layers },
             { id: 'buy', label: 'Presale Terminal', icon: Zap },
-            { id: 'staking', label: 'MindStake Vault (28% APY)', icon: Coins },
             { id: 'referrals', label: 'Referral Rewards (+15%)', icon: Users },
             { id: 'history', label: 'Transaction Activity', icon: Clock },
           ].map((tab) => {
@@ -235,7 +190,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === tab.id
                     ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-inner'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -248,8 +203,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           })}
         </div>
 
-        {/* 1. TOP METRICS ROW */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. TOP METRICS ROW (3 Cards: Balance, Total Deposited, Referrals) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Card 1: Total MIND Balance */}
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
             <div className="flex justify-between items-start mb-2">
@@ -263,9 +218,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
               {formatNumber(user.balanceMIND)} <span className="text-cyan-400 text-sm">MIND</span>
             </p>
-            <p className="text-xs text-emerald-400 font-mono mt-1 font-bold">
-              ≈ {formatUSD(user.balanceMIND * MIND_PRICE_USD)} USD
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-emerald-400 font-mono font-bold">
+                ≈ {formatUSD(user.balanceMIND * MIND_PRICE_USD)} USD
+              </p>
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer underline"
+              >
+                Withdraw <ArrowUpRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           {/* Card 2: Total Invested USD */}
@@ -282,29 +245,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {formatUSD(user.totalDepositedUSD)}
             </p>
             <p className="text-xs text-emerald-400 font-mono mt-1 font-bold">
-              USDT (BEP-20) + Bonus
+              USDT (BEP-20) + Bonus Credited
             </p>
           </div>
 
-          {/* Card 3: Staked Balance */}
-          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-teal-500/30 transition-colors">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Staked in Vault
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center">
-                <Coins className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {formatNumber(stakedBalance)} <span className="text-teal-400 text-sm">MIND</span>
-            </p>
-            <p className="text-xs text-emerald-400 font-mono mt-1 font-bold">
-              28% APY Earning
-            </p>
-          </div>
-
-          {/* Card 4: Referral Earnings */}
+          {/* Card 3: Referral Earnings */}
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
             <div className="flex justify-between items-start mb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -318,7 +263,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {user.referralsCount} <span className="text-amber-400 text-sm">Users</span>
             </p>
             <p className="text-xs text-amber-400 font-mono mt-1 font-bold">
-              +{formatUSD(user.referralEarningsUSD)} Earned
+              +{formatUSD(user.referralEarningsUSD)} Earned (15%)
             </p>
           </div>
         </div>
@@ -356,52 +301,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 3. DYNAMIC TAB CONTENT */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left: Quick Actions & Presale Widget */}
+            {/* Left: Presale Buy Terminal Widget */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-white">Quick Account Actions</h3>
-                  <span className="text-xs font-mono text-slate-400">EVM L1 Native</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    onClick={() => onOpenBuy(500)}
-                    className="p-4 bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/40 rounded-xl text-left transition-all group cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-bold text-white group-hover:text-cyan-300">Buy More MIND</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Fixed $0.41 Presale</p>
-                  </button>
-
-                  <button
-                    onClick={() => setShowWithdrawModal(true)}
-                    className="p-4 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all group cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
-                      <ArrowUpRight className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-bold text-white group-hover:text-emerald-300">Withdraw MIND</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">To external EVM wallet</p>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('staking')}
-                    className="p-4 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all group cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
-                      <Coins className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-bold text-white group-hover:text-teal-300">Stake for 28% APY</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Compound passive yield</p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Presale Buy Terminal Widget inside Dashboard */}
-              <PresaleCalculator onProceedToPay={(amt) => onOpenBuy(amt)} />
+              <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
             </div>
 
             {/* Right: Recent Activity Table */}
@@ -472,135 +374,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 4. BUY TERMINAL TAB */}
         {activeTab === 'buy' && (
           <div className="max-w-2xl mx-auto">
-            <PresaleCalculator onProceedToPay={(amt) => onOpenBuy(amt)} />
+            <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
           </div>
         )}
 
-        {/* 5. STAKING VAULT TAB */}
-        {activeTab === 'staking' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-7 bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-6">
-              <div>
-                <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-extrabold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  MindStake Pool v2
-                </span>
-                <h3 className="text-xl font-bold text-white mt-1">Stake MIND & Earn 28% Fixed APY</h3>
-                <p className="text-xs text-slate-300 mt-1">
-                  Lock your MIND tokens to secure the Layer-1 PoS-BFT validator consensus and receive automatic compounding rewards.
-                </p>
-              </div>
-
-              <form onSubmit={handleStakeMIND} className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1 text-xs">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                      Amount to Stake
-                    </span>
-                    <span className="font-mono text-slate-400">
-                      Available: <strong className="text-cyan-400">{formatNumber(user.balanceMIND)} MIND</strong>
-                    </span>
-                  </div>
-                  <div className="relative flex items-center">
-                    <input
-                      type="text"
-                      value={stakeAmount}
-                      onChange={(e) => setStakeAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-white font-mono text-base font-bold focus:border-cyan-400 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setStakeAmount(user.balanceMIND.toString())}
-                      className="absolute right-3 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-mono text-cyan-400 font-bold border border-slate-700"
-                    >
-                      MAX
-                    </button>
-                  </div>
-                </div>
-
-                {/* Duration selector */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                    Locking Period & Reward Multiplier
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { days: 30, apy: '18% APY' },
-                      { days: 90, apy: '28% APY' },
-                      { days: 180, apy: '36% APY' },
-                    ].map((plan) => (
-                      <button
-                        key={plan.days}
-                        type="button"
-                        onClick={() => setStakingDays(plan.days)}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          stakingDays === plan.days
-                            ? 'bg-cyan-500/20 border-cyan-500/40 text-white'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <p className="text-xs font-bold">{plan.days} Days</p>
-                        <p className="text-[10px] font-mono text-emerald-400 mt-0.5">{plan.apy}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Reward calculation breakdown */}
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5 text-xs font-mono">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Estimated Yield Return:</span>
-                    <span className="text-emerald-400 font-bold">+{formatNumber(calculateAPYReward())} MIND</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Unlock Date:</span>
-                    <span className="text-slate-200">
-                      {new Date(Date.now() + stakingDays * 24 * 3600 * 1000).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={user.balanceMIND <= 0}
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 disabled:opacity-50 text-slate-950 font-black rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-                >
-                  Deposit to Staking Vault
-                </button>
-              </form>
-            </div>
-
-            {/* Staking stats card */}
-            <div className="lg:col-span-5 space-y-4">
-              <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                  Global Staking Statistics
-                </h4>
-
-                <div className="space-y-3 font-mono text-xs">
-                  <div className="flex justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-800">
-                    <span className="text-slate-400">Total Value Locked (TVL):</span>
-                    <span className="text-white font-bold">$18.9M USD</span>
-                  </div>
-                  <div className="flex justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-800">
-                    <span className="text-slate-400">Total MIND Staked:</span>
-                    <span className="text-cyan-400 font-bold">46,240,100 MIND</span>
-                  </div>
-                  <div className="flex justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-800">
-                    <span className="text-slate-400">Validator Nodes:</span>
-                    <span className="text-emerald-400 font-bold">164 Active</span>
-                  </div>
-                  <div className="flex justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-800">
-                    <span className="text-slate-400">Reward Distribution:</span>
-                    <span className="text-slate-300">Every 0.8s Block</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 6. REFERRALS TAB */}
+        {/* 5. REFERRALS TAB */}
         {activeTab === 'referrals' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -643,7 +421,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   />
                   <button
                     onClick={handleCopyReferral}
-                    className="px-4 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 transition-colors"
+                    className="px-4 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                   >
                     {copiedRef ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     Copy
@@ -654,7 +432,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* 7. FULL TRANSACTION HISTORY TAB */}
+        {/* 6. FULL TRANSACTION HISTORY TAB */}
         {activeTab === 'history' && (
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6">
             <h3 className="text-base font-bold text-white mb-4">Complete Transaction Records</h3>
@@ -704,7 +482,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               <button
                 onClick={() => setShowWithdrawModal(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -749,7 +527,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => setWithdrawAmount(user.balanceMIND.toString())}
-                    className="absolute right-2.5 px-2 py-0.5 bg-slate-800 text-cyan-400 text-xs font-mono rounded border border-slate-700"
+                    className="absolute right-2.5 px-2 py-0.5 bg-slate-800 text-cyan-400 text-xs font-mono rounded border border-slate-700 cursor-pointer"
                   >
                     MAX
                   </button>
@@ -780,7 +558,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black rounded-xl uppercase text-xs tracking-wider shadow-lg transition-all"
+                className="w-full py-3 bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black rounded-xl uppercase text-xs tracking-wider shadow-lg transition-all cursor-pointer"
               >
                 Confirm Withdrawal
               </button>
@@ -799,7 +577,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               <button
                 onClick={() => setSelectedTx(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -837,7 +615,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <button
               onClick={() => setSelectedTx(null)}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-white transition-colors"
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-white transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -847,3 +625,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
+
