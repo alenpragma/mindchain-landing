@@ -21,7 +21,6 @@ import {
   Clock,
   LogOut,
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
   User,
@@ -29,12 +28,8 @@ import {
   MapPin,
   Phone,
   Lock,
-  Shield,
   Save,
-  CheckCircle2,
-  AlertCircle,
   Hash,
-  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 
@@ -76,7 +71,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | TransactionType>('all');
   const [txStatusFilter, setTxStatusFilter] = useState<string>('all');
   const [txCurrentPage, setTxCurrentPage] = useState(1);
-  const txPerPage = 5;
+  const txPerPage = 6;
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -152,10 +147,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // ==============================
   // 3. PROFILE FORM STATE
   // ==============================
-  const [profileName, setProfileName] = useState(user.name || 'Arif Hossain');
-  const [profileEmail, setProfileEmail] = useState(user.email || 'helloedulife@gmail.com');
-  const [profileAddress, setProfileAddress] = useState(user.physicalAddress || 'Gulshan-2, Dhaka 1212, Bangladesh');
-  const [profilePhone, setProfilePhone] = useState(user.phone || '+880 1712-345678');
+  const [profileName, setProfileName] = useState(user.name || 'Alexander Wright');
+  const [profileEmail, setProfileEmail] = useState(user.email || 'alexander.wright@mindchain.io');
+  const [profileAddress, setProfileAddress] = useState(
+    user.physicalAddress || '742 Evergreen Terrace, Suite 400, Austin, TX 78701, United States'
+  );
+  const [profilePhone, setProfilePhone] = useState(user.phone || '+1 (512) 555-0198');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const handleProfileSave = (e: React.FormEvent) => {
@@ -172,7 +169,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       };
       onUpdateUser(updated);
       setIsSavingProfile(false);
-      onShowToast('Profile Updated Successfully', 'Your account details have been saved.', 'success');
+      onShowToast('Profile Updated Successfully', 'Your account details have been securely saved.', 'success');
     }, 600);
   };
 
@@ -196,7 +193,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleCopyTxHash = (hash: string) => {
     navigator.clipboard.writeText(hash);
     setCopiedTxHash(true);
-    onShowToast('Tx Hash Copied', hash, 'info');
+    onShowToast('Transaction Hash Copied', hash, 'info');
     setTimeout(() => setCopiedTxHash(false), 2000);
   };
 
@@ -237,7 +234,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onAddTransaction(tx);
     setShowWithdrawModal(false);
     setWithdrawAmount('');
-    onShowToast('Withdrawal Initiated', `Dispatched ${formatNumber(num)} MIND [${generatedOrderId}] to ${truncateAddress(withdrawAddress)}`, 'info');
+    onShowToast(
+      'Withdrawal Initiated',
+      `Dispatched ${formatNumber(num)} MIND [${generatedOrderId}] to ${truncateAddress(withdrawAddress)}`,
+      'info'
+    );
   };
 
   return (
@@ -350,111 +351,116 @@ export const Dashboard: React.FC<DashboardProps> = ({
           })}
         </div>
 
-        {/* 1. TOP METRICS ROW (3 Cards: Balance, Total Deposited, Referrals) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Card 1: Total MIND Balance */}
-          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Available Balance
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
-                <Wallet className="w-4 h-4" />
+        {/* 1. TOP METRICS ROW & REFERRAL BANNER: ONLY SHOWN ON OVERVIEW TAB */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Top 3 Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Card 1: Total Available MIND Balance */}
+              <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Total Available Balance
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  {formatNumber(user.balanceMIND)} <span className="text-cyan-400 text-sm">MIND</span>
+                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-emerald-400 font-mono font-bold">
+                    ≈ {formatUSD(user.balanceMIND * MIND_PRICE_USD)} USD
+                  </p>
+                  <button
+                    onClick={() => setShowWithdrawModal(true)}
+                    className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer underline"
+                  >
+                    Withdraw <ArrowUpRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Total Invested USD */}
+              <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Total Deposited
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  {formatUSD(user.totalDepositedUSD)}
+                </p>
+                <p className="text-xs text-emerald-400 font-mono mt-1 font-bold">
+                  USDT (BEP-20) + Bonus Credited
+                </p>
+              </div>
+
+              {/* Card 3: Referral Earnings in MIND */}
+              <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Referral Bonus Earned
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  {formatNumber(totalRefMIND)} <span className="text-amber-400 text-sm">MIND</span>
+                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-amber-400 font-mono font-bold">
+                    ≈ {formatUSD(totalRefMIND * MIND_PRICE_USD)} USD ({user.referralsCount} Invites)
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('referrals')}
+                    className="text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer underline"
+                  >
+                    View List <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {formatNumber(user.balanceMIND)} <span className="text-cyan-400 text-sm">MIND</span>
-            </p>
-            <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-emerald-400 font-mono font-bold">
-                ≈ {formatUSD(user.balanceMIND * MIND_PRICE_USD)} USD
-              </p>
-              <button
-                onClick={() => setShowWithdrawModal(true)}
-                className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer underline"
-              >
-                Withdraw <ArrowUpRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
 
-          {/* Card 2: Total Invested USD */}
-          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Deposited
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4" />
+            {/* Referral Quick Share Banner */}
+            <div className="bg-gradient-to-r from-cyan-900/40 via-slate-900 to-amber-950/30 border border-cyan-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="space-y-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30 text-[10px] font-extrabold uppercase tracking-wider font-mono flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    +15% Instant MIND Coin Bonus
+                  </span>
+                </div>
+                <h3 className="text-lg font-extrabold text-white">
+                  Share Your Affiliate Link & Earn Free MIND Coins
+                </h3>
+                <p className="text-xs text-slate-300 max-w-xl">
+                  Earn an immediate 15% bonus in MIND Coins for every contributor who purchases MIND through your referral link.
+                </p>
+              </div>
+
+              <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 shrink-0">
+                <div className="w-full sm:w-80 bg-slate-950/90 border border-slate-700 px-3 py-2 rounded-xl text-xs font-mono text-cyan-300 truncate">
+                  {referralLink}
+                </div>
+                <button
+                  onClick={handleCopyReferral}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                >
+                  {copiedRef ? <Check className="w-4 h-4 text-slate-950" /> : <Copy className="w-4 h-4 text-slate-950" />}
+                  {copiedRef ? 'Copied' : 'Copy Link'}
+                </button>
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {formatUSD(user.totalDepositedUSD)}
-            </p>
-            <p className="text-xs text-emerald-400 font-mono mt-1 font-bold">
-              USDT (BEP-20) + Bonus Credited
-            </p>
           </div>
+        )}
 
-          {/* Card 3: Referral Earnings (in MIND Coins) */}
-          <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Referral Bonus Earned
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {formatNumber(totalRefMIND)} <span className="text-amber-400 text-sm">MIND</span>
-            </p>
-            <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-amber-400 font-mono font-bold">
-                ≈ {formatUSD(totalRefMIND * MIND_PRICE_USD)} USD ({user.referralsCount} Invites)
-              </p>
-              <button
-                onClick={() => setActiveTab('referrals')}
-                className="text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer underline"
-              >
-                View List <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. REFERRAL PROGRAM QUICK BANNER */}
-        <div className="bg-gradient-to-r from-cyan-900/40 via-slate-900 to-amber-950/30 border border-cyan-500/30 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
-          <div className="space-y-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30 text-[10px] font-extrabold uppercase tracking-wider font-mono flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                +15% Instant MIND Coin Bonus
-              </span>
-            </div>
-            <h3 className="text-lg font-extrabold text-white">
-              Share Your Affiliate Link & Earn Free MIND Coins
-            </h3>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Earn an immediate 15% bonus in MIND Coins for every contributor who buys MIND using your referral link.
-            </p>
-          </div>
-
-          <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 shrink-0">
-            <div className="w-full sm:w-80 bg-slate-950/90 border border-slate-700 px-3 py-2 rounded-xl text-xs font-mono text-cyan-300 truncate">
-              {referralLink}
-            </div>
-            <button
-              onClick={handleCopyReferral}
-              className="w-full sm:w-auto px-4 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
-            >
-              {copiedRef ? <Check className="w-4 h-4 text-slate-950" /> : <Copy className="w-4 h-4 text-slate-950" />}
-              {copiedRef ? 'Copied' : 'Copy Link'}
-            </button>
-          </div>
-        </div>
-
-        {/* 3. DYNAMIC TAB CONTENT */}
+        {/* 2. DYNAMIC TAB CONTENT */}
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
@@ -533,9 +539,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 2: BUY TERMINAL */}
+        {/* TAB 2: PRESALE TERMINAL (CLEAN & DEDICATED) */}
         {activeTab === 'buy' && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto py-2">
             <PresaleCalculator isLoggedIn={true} onProceedToPay={(amt, coupon) => onOpenBuy(amt, coupon)} />
           </div>
         )}
@@ -549,9 +555,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <Users className="w-6 h-6 text-amber-400" />
                   <div>
-                    <h3 className="text-lg font-bold text-white">MindChain Affiliate & Referral System</h3>
+                    <h3 className="text-lg font-bold text-white">MindChain Affiliate & Referral Program</h3>
                     <p className="text-xs text-slate-400">
-                      Earn 15% instant commission rewarded directly in MIND Coins for every contributor.
+                      Earn a 15% instant commission rewarded directly in MIND Coins for every contributor who participates.
                     </p>
                   </div>
                 </div>
@@ -580,7 +586,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800">
                   <p className="text-[10px] uppercase font-bold text-slate-400">Commission Rate</p>
                   <p className="text-2xl font-black text-cyan-400 font-mono mt-1">15.00%</p>
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Instant Calculation in MIND</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Instant Payout in MIND</p>
                 </div>
               </div>
 
@@ -616,7 +622,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     Referred Investors List ({filteredReferrals.length})
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Detailed list of all contributors registered under your referral code with bonus in MIND.
+                    Comprehensive audit of all investors referred with real-time MIND Coin distributions.
                   </p>
                 </div>
 
@@ -733,7 +739,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 4: COMPLETE TRANSACTION HISTORY WITH FILTERS, ORDER ID & PAGINATION */}
+        {/* TAB 4: COMPLETE TRANSACTION HISTORY (CLEAN & DEDICATED) */}
         {activeTab === 'history' && (
           <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 space-y-6">
             {/* Header & Filter Controls Bar */}
@@ -744,7 +750,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   Transaction History & Order Records
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Search, filter, and review all your presale purchases, referral rewards, and withdrawals.
+                  Filter, search by Order ID, and review all your presale contributions, referral rewards, and withdrawals.
                 </p>
               </div>
 
@@ -923,7 +929,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 5: PROFILE UPDATE SETTINGS (ইমেইল, নাম, ঠিকানা আপডেট; ওয়ালেট লকড) */}
+        {/* TAB 5: PROFILE UPDATE SETTINGS */}
         {activeTab === 'profile' && (
           <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-[#1e293b]/60 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
@@ -931,10 +937,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     <User className="w-5 h-5 text-cyan-400" />
-                    Profile & Account Information
+                    Profile & Account Settings
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Update your profile details, contact information, and delivery address.
+                    Manage your investor identity, email notifications, contact details, and physical address.
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
@@ -955,7 +961,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </p>
                   <p className="text-slate-300 leading-relaxed">
-                    যে ওয়ালেটটি দিয়ে একাউন্ট তৈরি করা হয়েছে তা নিরাপত্তা ও অন-চেইন ভেরিফিকেশনের স্বার্থে পরিবর্তনযোগ্য নয়। আপনি নাম, ইমেইল ও ঠিকানা যেকোনো সময় আপডেট করতে পারবেন।
+                    For cryptographic security and on-chain verification integrity, the registered EVM wallet address is permanently bound to this account. You may freely update your name, email address, phone, and delivery address anytime.
                   </p>
                 </div>
               </div>
@@ -966,7 +972,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-amber-400" />
-                      Registered EVM Wallet Address (অপরিবর্তনীয়)
+                      Registered EVM Wallet Address (Immutable)
                     </span>
                     <span className="text-[10px] text-amber-400 font-mono">Cannot be changed</span>
                   </label>
@@ -993,14 +999,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-cyan-400" />
-                    Full Name (আপনার নাম)
+                    Full Name
                   </label>
                   <input
                     type="text"
                     required
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Enter your full name"
+                    placeholder="e.g. Alexander Wright"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors"
                   />
                 </div>
@@ -1009,14 +1015,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-cyan-400" />
-                    Email Address (ইমেইল এড্রেস)
+                    Email Address
                   </label>
                   <input
                     type="email"
                     required
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
-                    placeholder="yourname@example.com"
+                    placeholder="investor@example.com"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
                   />
                 </div>
@@ -1025,13 +1031,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                    Physical / Mailing Address (আপনার ঠিকানা)
+                    Physical / Mailing Address
                   </label>
                   <textarea
                     rows={2}
                     value={profileAddress}
                     onChange={(e) => setProfileAddress(e.target.value)}
-                    placeholder="House, Road, City, Country"
+                    placeholder="Street address, Suite, City, State, Country"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-medium outline-none focus:border-cyan-400 transition-colors resize-none"
                   />
                 </div>
@@ -1040,13 +1046,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                    Contact / Telegram Phone (যোগাযোগ নম্বর - ঐচ্ছিক)
+                    Contact Phone / Telegram (Optional)
                   </label>
                   <input
                     type="text"
                     value={profilePhone}
                     onChange={(e) => setProfilePhone(e.target.value)}
-                    placeholder="+880 1712-345678"
+                    placeholder="+1 (512) 555-0198"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-3.5 text-sm text-white font-mono outline-none focus:border-cyan-400 transition-colors"
                   />
                 </div>
@@ -1155,7 +1161,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
 
               <div className="p-3 bg-cyan-950/30 rounded-xl border border-cyan-500/20 text-[11px] text-cyan-300/90 font-mono">
-                💡 <strong>Tip:</strong> Once withdrawn to your address, you can freely transfer, trade, or sell your MIND anytime on the main network at{' '}
+                💡 <strong>Tip:</strong> Once withdrawn to your address, you can freely transfer, trade, or stake your MIND anytime on the main network at{' '}
                 <a href="https://mindchain.info" target="_blank" rel="noreferrer" className="underline font-bold text-white hover:text-cyan-200">
                   mindchain.info
                 </a>.
